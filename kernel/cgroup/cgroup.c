@@ -28,15 +28,14 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/cgroup.h>
+#include "cgroup-internal.h"
+
 #include <linux/cred.h>
 #include <linux/ctype.h>
 #include <linux/errno.h>
 #include <linux/init_task.h>
 #include <linux/kernel.h>
-#include <linux/list.h>
 #include <linux/magic.h>
-#include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/mount.h>
 #include <linux/pagemap.h>
@@ -47,37 +46,25 @@
 #include <linux/spinlock.h>
 #include <linux/percpu-rwsem.h>
 #include <linux/string.h>
-#include <linux/sort.h>
-#include <linux/kmod.h>
-#include <linux/delayacct.h>
-#include <linux/cgroupstats.h>
 #include <linux/hashtable.h>
-#include <linux/pid_namespace.h>
 #include <linux/idr.h>
-#include <linux/vmalloc.h> /* TODO: replace with more sophisticated array */
 #include <linux/kthread.h>
 #include <linux/delay.h>
-#include <linux/cpuset.h>
 #include <linux/atomic.h>
+#include <linux/cpuset.h>
+#include <linux/binfmts.h>
+#include <linux/cpu_input_boost.h>
+#include <linux/devfreq_boost.h>
 #include <linux/proc_ns.h>
 #include <linux/nsproxy.h>
 #include <linux/file.h>
+#include <linux/psi.h>
 #include <net/sock.h>
-#include <linux/binfmts.h>
-#include <linux/cpu_input_boost.h>
+#include <linux/sched/sysctl.h>
+#include <linux/ioprio.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cgroup.h>
-#include <linux/binfmts.h>
-#include <linux/devfreq_boost.h>
-
-/*
- * pidlists linger the following amount before being destroyed.  The goal
- * is avoiding frequent destruction in the middle of consecutive read calls
- * Expiring in the middle is a performance problem not a correctness one.
- * 1 sec should be enough.
- */
-#define CGROUP_PIDLIST_DESTROY_DELAY	HZ
 
 #define CGROUP_FILE_NAME_MAX		(MAX_CGROUP_TYPE_NAMELEN +	\
 					 MAX_CFTYPE_NAME + 2)
@@ -92,14 +79,12 @@
  * These locks are exported if CONFIG_PROVE_RCU so that accessors in
  * cgroup.h can use them for lockdep annotations.
  */
-#ifdef CONFIG_PROVE_RCU
 DEFINE_MUTEX(cgroup_mutex);
 DEFINE_SPINLOCK(css_set_lock);
+
+#ifdef CONFIG_PROVE_RCU
 EXPORT_SYMBOL_GPL(cgroup_mutex);
 EXPORT_SYMBOL_GPL(css_set_lock);
-#else
-static DEFINE_MUTEX(cgroup_mutex);
-static DEFINE_SPINLOCK(css_set_lock);
 #endif
 
 /*
@@ -113,12 +98,6 @@ static DEFINE_SPINLOCK(cgroup_idr_lock);
  * against file removal/re-creation across css hiding.
  */
 static DEFINE_SPINLOCK(cgroup_file_kn_lock);
-
-/*
- * Protects cgroup_subsys->release_agent_path.  Modifying it also requires
- * cgroup_mutex.  Reading requires either cgroup_mutex or this spinlock.
- */
-static DEFINE_SPINLOCK(release_agent_path_lock);
 
 struct percpu_rw_semaphore cgroup_threadgroup_rwsem;
 
@@ -135,15 +114,9 @@ struct percpu_rw_semaphore cgroup_threadgroup_rwsem;
  */
 static struct workqueue_struct *cgroup_destroy_wq;
 
-/*
- * pidlist destructions need to be flushed on cgroup destruction.  Use a
- * separate workqueue as flush domain.
- */
-static struct workqueue_struct *cgroup_pidlist_destroy_wq;
-
 /* generate an array of cgroup subsystem pointers */
 #define SUBSYS(_x) [_x ## _cgrp_id] = &_x ## _cgrp_subsys,
-static struct cgroup_subsys *cgroup_subsys[] = {
+struct cgroup_subsys *cgroup_subsys[] = {
 #include <linux/cgroup_subsys.h>
 };
 #undef SUBSYS
@@ -190,18 +163,16 @@ EXPORT_SYMBOL_GPL(cgrp_dfl_root);
  */
 static bool cgrp_dfl_visible;
 
-/* Controllers blocked by the commandline in v1 */
-static u16 cgroup_no_v1_mask;
-
 /* some controllers are not supported in the default hierarchy */
 static u16 cgrp_dfl_inhibit_ss_mask;
 
 /* some controllers are implicitly enabled on the default hierarchy */
 static unsigned long cgrp_dfl_implicit_ss_mask;
 
-/* The list of hierarchy roots */
+unsigned int sysctl_iosched_boost_top_app = 0;
 
-static LIST_HEAD(cgroup_roots);
+/* The list of hierarchy roots */
+LIST_HEAD(cgroup_roots);
 static int cgroup_root_count;
 
 /* hierarchy ID allocation and mapping, protected by cgroup_mutex */
@@ -239,10 +210,7 @@ static u16 have_canfork_callback __read_mostly;
 
 static struct file_system_type cgroup2_fs_type;
 static struct cftype cgroup_dfl_base_files[];
-static struct cftype cgroup_legacy_base_files[];
 
-static int rebind_subsystems(struct cgroup_root *dst_root, u16 ss_mask);
-static void cgroup_lock_and_drain_offline(struct cgroup *cgrp);
 static int cgroup_apply_control(struct cgroup *cgrp);
 static void cgroup_finalize_control(struct cgroup *cgrp, int ret);
 static void css_task_iter_advance(struct css_task_iter *it);
@@ -263,17 +231,12 @@ static int cgroup_addrm_files(struct cgroup_subsys_state *css,
  * is fine for individual subsystems but unsuitable for cgroup core.  This
  * is slower static_key_enabled() based test indexed by @ssid.
  */
-static bool cgroup_ssid_enabled(int ssid)
+bool cgroup_ssid_enabled(int ssid)
 {
 	if (CGROUP_SUBSYS_COUNT == 0)
 		return false;
 
 	return static_key_enabled(cgroup_subsys_enabled_key[ssid]);
-}
-
-static bool cgroup_ssid_no_v1(int ssid)
-{
-	return cgroup_no_v1_mask & (1 << ssid);
 }
 
 /**
@@ -329,7 +292,7 @@ static bool cgroup_ssid_no_v1(int ssid)
  *
  * - debug: disallowed on the default hierarchy.
  */
-static bool cgroup_on_dfl(const struct cgroup *cgrp)
+bool cgroup_on_dfl(const struct cgroup *cgrp)
 {
 	return cgrp->root == &cgrp_dfl_root;
 }
@@ -476,12 +439,6 @@ out_unlock:
 	return css;
 }
 
-/* convenient tests for these bits */
-static inline bool cgroup_is_dead(const struct cgroup *cgrp)
-{
-	return !(cgrp->self.flags & CSS_ONLINE);
-}
-
 struct cgroup_subsys_state *of_css(struct kernfs_open_file *of)
 {
 	struct cgroup *cgrp = of->kn->parent->priv;
@@ -501,11 +458,6 @@ struct cgroup_subsys_state *of_css(struct kernfs_open_file *of)
 		return &cgrp->self;
 }
 EXPORT_SYMBOL_GPL(of_css);
-
-static int notify_on_release(const struct cgroup *cgrp)
-{
-	return test_bit(CGRP_NOTIFY_ON_RELEASE, &cgrp->flags);
-}
 
 /**
  * for_each_css - iterate all css's of a cgroup
@@ -537,15 +489,6 @@ static int notify_on_release(const struct cgroup *cgrp)
 		else
 
 /**
- * for_each_subsys - iterate all enabled cgroup subsystems
- * @ss: the iteration cursor
- * @ssid: the index of @ss, CGROUP_SUBSYS_COUNT after reaching the end
- */
-#define for_each_subsys(ss, ssid)					\
-	for ((ssid) = 0; (ssid) < CGROUP_SUBSYS_COUNT &&		\
-	     (((ss) = cgroup_subsys[ssid]) || true); (ssid)++)
-
-/**
  * do_each_subsys_mask - filter for_each_subsys with a bitmask
  * @ss: the iteration cursor
  * @ssid: the index of @ss, CGROUP_SUBSYS_COUNT after reaching the end
@@ -568,10 +511,6 @@ static int notify_on_release(const struct cgroup *cgrp)
 		}							\
 	}								\
 } while (false)
-
-/* iterate across the hierarchies */
-#define for_each_root(root)						\
-	list_for_each_entry((root), &cgroup_roots, root_list)
 
 /* iterate over child cgrps, lock should be held throughout iteration */
 #define cgroup_for_each_live_child(child, cgrp)				\
@@ -599,28 +538,8 @@ static int notify_on_release(const struct cgroup *cgrp)
 			;						\
 		else
 
-static void cgroup_release_agent(struct work_struct *work);
-static void check_for_release(struct cgroup *cgrp);
-
-/*
- * A cgroup can be associated with multiple css_sets as different tasks may
- * belong to different cgroups on different hierarchies.  In the other
- * direction, a css_set is naturally associated with multiple cgroups.
- * This M:N relationship is represented by the following link structure
- * which exists for each association and allows traversing the associations
- * from both sides.
- */
-struct cgrp_cset_link {
-	/* the cgroup and css_set this link associates */
-	struct cgroup		*cgrp;
-	struct css_set		*cset;
-
-	/* list of cgrp_cset_links anchored at cgrp->cset_links */
-	struct list_head	cset_link;
-
-	/* list of cgrp_cset_links anchored at css_set->cgrp_links */
-	struct list_head	cgrp_link;
-};
+static struct kmem_cache *cgrp_cset_pool;
+static struct kmem_cache *cgrp_cset_link_pool;
 
 /*
  * The default css_set - used by init and its children prior to any
@@ -631,12 +550,12 @@ struct cgrp_cset_link {
  */
 struct css_set init_css_set = {
 	.refcount		= ATOMIC_INIT(1),
-	.cgrp_links		= LIST_HEAD_INIT(init_css_set.cgrp_links),
 	.tasks			= LIST_HEAD_INIT(init_css_set.tasks),
 	.mg_tasks		= LIST_HEAD_INIT(init_css_set.mg_tasks),
+	.task_iters		= LIST_HEAD_INIT(init_css_set.task_iters),
+	.cgrp_links		= LIST_HEAD_INIT(init_css_set.cgrp_links),
 	.mg_preload_node	= LIST_HEAD_INIT(init_css_set.mg_preload_node),
 	.mg_node		= LIST_HEAD_INIT(init_css_set.mg_node),
-	.task_iters		= LIST_HEAD_INIT(init_css_set.task_iters),
 };
 
 static int css_set_count	= 1;	/* 1 for init_css_set */
@@ -765,7 +684,7 @@ static void css_set_move_task(struct task_struct *task,
 		 */
 		WARN_ON_ONCE(task->flags & PF_EXITING);
 
-		rcu_assign_pointer(task->cgroups, to_cset);
+		cgroup_move_task(task, to_cset);
 		list_add_tail(&task->cg_list, use_mg_tasks ? &to_cset->mg_tasks :
 							     &to_cset->tasks);
 	}
@@ -792,6 +711,13 @@ static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
 	return key;
 }
 
+static void __free_cset_rcu(struct rcu_head *head)
+{
+	struct css_set *cset = container_of(head, struct css_set, rcu_head);
+
+	kmem_cache_free(cgrp_cset_pool, cset);
+}
+
 static void put_css_set_locked(struct css_set *cset)
 {
 	struct cgrp_cset_link *link, *tmp_link;
@@ -816,10 +742,10 @@ static void put_css_set_locked(struct css_set *cset)
 		list_del(&link->cgrp_link);
 		if (cgroup_parent(link->cgrp))
 			cgroup_put(link->cgrp);
-		kfree(link);
+		kmem_cache_free(cgrp_cset_link_pool, link);
 	}
 
-	kfree_rcu(cset, rcu_head);
+	call_rcu(&cset->rcu_head, __free_cset_rcu);
 }
 
 static void put_css_set(struct css_set *cset)
@@ -975,7 +901,7 @@ static void free_cgrp_cset_links(struct list_head *links_to_free)
 
 	list_for_each_entry_safe(link, tmp_link, links_to_free, cset_link) {
 		list_del(&link->cset_link);
-		kfree(link);
+		kmem_cache_free(cgrp_cset_link_pool, link);
 	}
 }
 
@@ -995,7 +921,7 @@ static int allocate_cgrp_cset_links(int count, struct list_head *tmp_links)
 	INIT_LIST_HEAD(tmp_links);
 
 	for (i = 0; i < count; i++) {
-		link = kzalloc(sizeof(*link), GFP_KERNEL);
+		link = kmem_cache_zalloc(cgrp_cset_link_pool, GFP_KERNEL);
 		if (!link) {
 			free_cgrp_cset_links(tmp_links);
 			return -ENOMEM;
@@ -1068,24 +994,24 @@ static struct css_set *find_css_set(struct css_set *old_cset,
 	if (cset)
 		return cset;
 
-	cset = kzalloc(sizeof(*cset), GFP_KERNEL);
+	cset = kmem_cache_zalloc(cgrp_cset_pool, GFP_KERNEL);
 	if (!cset)
 		return NULL;
 
 	/* Allocate all the cgrp_cset_link objects that we'll need */
 	if (allocate_cgrp_cset_links(cgroup_root_count, &tmp_links) < 0) {
-		kfree(cset);
+		kmem_cache_free(cgrp_cset_pool, cset);
 		return NULL;
 	}
 
 	atomic_set(&cset->refcount, 1);
-	INIT_LIST_HEAD(&cset->cgrp_links);
 	INIT_LIST_HEAD(&cset->tasks);
 	INIT_LIST_HEAD(&cset->mg_tasks);
-	INIT_LIST_HEAD(&cset->mg_preload_node);
-	INIT_LIST_HEAD(&cset->mg_node);
 	INIT_LIST_HEAD(&cset->task_iters);
 	INIT_HLIST_NODE(&cset->hlist);
+	INIT_LIST_HEAD(&cset->cgrp_links);
+	INIT_LIST_HEAD(&cset->mg_preload_node);
+	INIT_LIST_HEAD(&cset->mg_node);
 
 	/* Copy the set of subsystem state objects generated in
 	 * find_existing_css_set() */
@@ -1122,7 +1048,7 @@ static struct css_set *find_css_set(struct css_set *old_cset,
 	return cset;
 }
 
-static struct cgroup_root *cgroup_root_from_kf(struct kernfs_root *kf_root)
+struct cgroup_root *cgroup_root_from_kf(struct kernfs_root *kf_root)
 {
 	struct cgroup *root_cgrp = kf_root->kn->priv;
 
@@ -1182,7 +1108,7 @@ static void cgroup_destroy_root(struct cgroup_root *root)
 	list_for_each_entry_safe(link, tmp_link, &cgrp->cset_links, cset_link) {
 		list_del(&link->cset_link);
 		list_del(&link->cgrp_link);
-		kfree(link);
+		kmem_cache_free(cgrp_cset_link_pool, link);
 	}
 
 	spin_unlock_irq(&css_set_lock);
@@ -1267,8 +1193,8 @@ static struct cgroup *cset_cgroup_from_root(struct css_set *cset,
  * Return the cgroup for "task" from the given hierarchy. Must be
  * called with cgroup_mutex and css_set_lock held.
  */
-static struct cgroup *task_cgroup_from_root(struct task_struct *task,
-					    struct cgroup_root *root)
+struct cgroup *task_cgroup_from_root(struct task_struct *task,
+				     struct cgroup_root *root)
 {
 	/*
 	 * No need to lock the task - since we hold cgroup_mutex the
@@ -1305,7 +1231,6 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  */
 
 static struct kernfs_syscall_ops cgroup_kf_syscall_ops;
-static const struct file_operations proc_cgroupstats_operations;
 
 static char *cgroup_file_name(struct cgroup *cgrp, const struct cftype *cft,
 			      char *buf)
@@ -1399,7 +1324,7 @@ static u16 cgroup_calc_subtree_ss_mask(u16 subtree_control, u16 this_ss_mask)
  * inaccessible any time.  If the caller intends to continue to access the
  * cgroup, it should pin it before invoking this function.
  */
-static void cgroup_kn_unlock(struct kernfs_node *kn)
+void cgroup_kn_unlock(struct kernfs_node *kn)
 {
 	struct cgroup *cgrp;
 
@@ -1431,8 +1356,7 @@ static void cgroup_kn_unlock(struct kernfs_node *kn)
  * locking under kernfs active protection and allows all kernfs operations
  * including self-removal.
  */
-static struct cgroup *cgroup_kn_lock_live(struct kernfs_node *kn,
-					  bool drain_offline)
+struct cgroup *cgroup_kn_lock_live(struct kernfs_node *kn, bool drain_offline)
 {
 	struct cgroup *cgrp;
 
@@ -1543,12 +1467,11 @@ err:
 	return ret;
 }
 
-static int rebind_subsystems(struct cgroup_root *dst_root, u16 ss_mask)
+int rebind_subsystems(struct cgroup_root *dst_root, u16 ss_mask)
 {
 	struct cgroup *dcgrp = &dst_root->cgrp;
 	struct cgroup_subsys *ss;
 	int ssid, i, ret;
-	u16 dfl_disable_ss_mask = 0;
 
 	lockdep_assert_held(&cgroup_mutex);
 
@@ -1565,27 +1488,7 @@ static int rebind_subsystems(struct cgroup_root *dst_root, u16 ss_mask)
 		/* can't move between two non-dummy roots either */
 		if (ss->root != &cgrp_dfl_root && dst_root != &cgrp_dfl_root)
 			return -EBUSY;
-
-		/*
-		 * Collect ssid's that need to be disabled from default
-		 * hierarchy.
-		 */
-		if (ss->root == &cgrp_dfl_root)
-			dfl_disable_ss_mask |= 1 << ssid;
-
 	} while_each_subsys_mask();
-
-	if (dfl_disable_ss_mask) {
-		struct cgroup *scgrp = &cgrp_dfl_root.cgrp;
-
-		/*
-		 * Controllers from default hierarchy that need to be rebound
-		 * are all disabled together in one go.
-		 */
-		cgrp_dfl_root.subsys_mask &= ~dfl_disable_ss_mask;
-		WARN_ON(cgroup_apply_control(scgrp));
-		cgroup_finalize_control(scgrp, 0);
-	}
 
 	do_each_subsys_mask(ss, ssid, ss_mask) {
 		struct cgroup_root *src_root = ss->root;
@@ -1595,12 +1498,10 @@ static int rebind_subsystems(struct cgroup_root *dst_root, u16 ss_mask)
 
 		WARN_ON(!css || cgroup_css(dcgrp, ss));
 
-		if (src_root != &cgrp_dfl_root) {
-			/* disable from the source */
-			src_root->subsys_mask &= ~(1 << ssid);
-			WARN_ON(cgroup_apply_control(scgrp));
-			cgroup_finalize_control(scgrp, 0);
-		}
+		/* disable from the source */
+		src_root->subsys_mask &= ~(1 << ssid);
+		WARN_ON(cgroup_apply_control(scgrp));
+		cgroup_finalize_control(scgrp, 0);
 
 		/* rebind */
 		RCU_INIT_POINTER(scgrp->subsys[ssid], NULL);
@@ -1648,10 +1549,10 @@ static int cgroup_show_path(struct seq_file *sf, struct kernfs_node *kf_node,
 	if (!buf)
 		return -ENOMEM;
 
-	spin_lock_bh(&css_set_lock);
+	spin_lock_irq(&css_set_lock);
 	ns_cgroup = current_cgns_cgroup_from_root(kf_cgroot);
 	len = kernfs_path_from_node(kf_node, ns_cgroup->kn, buf, PATH_MAX);
-	spin_unlock_bh(&css_set_lock);
+	spin_unlock_irq(&css_set_lock);
 
 	if (len >= PATH_MAX)
 		len = -ERANGE;
@@ -1663,8 +1564,7 @@ static int cgroup_show_path(struct seq_file *sf, struct kernfs_node *kf_node,
 	return len;
 }
 
-static int cgroup_show_options(struct seq_file *seq,
-			       struct kernfs_root *kf_root)
+static int cgroup_show_options(struct seq_file *seq, struct kernfs_root *kf_root)
 {
 	struct cgroup_root *root = cgroup_root_from_kf(kf_root);
 	struct cgroup_subsys *ss;
@@ -1732,10 +1632,6 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 			if (one_ss)
 				return -EINVAL;
 			all_ss = true;
-			continue;
-		}
-		if (!strcmp(token, "__DEVEL__sane_behavior")) {
-			opts->flags |= CGRP_ROOT_SANE_BEHAVIOR;
 			continue;
 		}
 		if (!strcmp(token, "noprefix")) {
@@ -1806,15 +1702,6 @@ static int parse_cgroupfs_options(char *data, struct cgroup_sb_opts *opts)
 			return -ENOENT;
 	}
 
-	if (opts->flags & CGRP_ROOT_SANE_BEHAVIOR) {
-		pr_warn("sane_behavior: this is still under development and its behaviors will change, proceed at your own risk\n");
-		if (nr_opts != 1) {
-			pr_err("sane_behavior: no other mount options allowed\n");
-			return -EINVAL;
-		}
-		return 0;
-	}
-
 	/*
 	 * If the 'all' option was specified select all the subsystems,
 	 * otherwise if 'none', 'name=' and a subsystem name options were
@@ -1851,7 +1738,6 @@ static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
 {
 	int ret = 0;
 	struct cgroup_root *root = cgroup_root_from_kf(kf_root);
-	struct cgroup_namespace *ns = current->nsproxy->cgroup_ns;
 	struct cgroup_sb_opts opts;
 	u16 added_mask, removed_mask;
 
@@ -1870,13 +1756,6 @@ static int cgroup_remount(struct kernfs_root *kf_root, int *flags, char *data)
 	if (opts.subsys_mask != root->subsys_mask || opts.release_agent)
 		pr_warn("option changes via remount are deprecated (pid=%d comm=%s)\n",
 			task_tgid_nr(current), current->comm);
-
-	/* See cgroup_mount release_agent handling */
-	if (opts.release_agent &&
-	    ((ns->user_ns != &init_user_ns) || !capable(CAP_SYS_ADMIN))) {
-		ret = -EINVAL;
-		goto out_unlock;
-	}
 
 	added_mask = opts.subsys_mask & ~root->subsys_mask;
 	removed_mask = root->subsys_mask & ~opts.subsys_mask;
@@ -2119,7 +1998,7 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 	struct super_block *pinned_sb = NULL;
 	struct cgroup_namespace *ns = current->nsproxy->cgroup_ns;
 	struct cgroup_subsys *ss;
-	struct cgroup_root *root = NULL;
+	struct cgroup_root *root;
 	struct cgroup_sb_opts opts;
 	struct dentry *dentry;
 	int ret;
@@ -2159,15 +2038,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 	ret = parse_cgroupfs_options(data, &opts);
 	if (ret)
 		goto out_unlock;
-
-	/* look for a matching existing root */
-	if (opts.flags & CGRP_ROOT_SANE_BEHAVIOR) {
-		cgrp_dfl_visible = true;
-		root = &cgrp_dfl_root;
-		cgroup_get(&root->cgrp);
-		ret = 0;
-		goto out_unlock;
-	}
 
 	/*
 	 * Destruction of cgroup root is asynchronous, so subsystems may
@@ -2265,16 +2135,6 @@ static struct dentry *cgroup_mount(struct file_system_type *fs_type,
 		goto out_unlock;
 	}
 
-	/*
-	 * Release agent gets called with all capabilities,
-	 * require capabilities to set release agent.
-	 */
-	if (opts.release_agent &&
-	    ((ns->user_ns != &init_user_ns) || !capable(CAP_SYS_ADMIN))) {
-		ret = -EINVAL;
-		goto out_unlock;
-	}
-
 	root = kzalloc(sizeof(*root), GFP_KERNEL);
 	if (!root) {
 		ret = -ENOMEM;
@@ -2312,11 +2172,11 @@ out_mount:
 		struct cgroup *cgrp;
 
 		mutex_lock(&cgroup_mutex);
-		spin_lock_bh(&css_set_lock);
+		spin_lock_irq(&css_set_lock);
 
 		cgrp = cset_cgroup_from_root(ns->root_cset, root);
 
-		spin_unlock_bh(&css_set_lock);
+		spin_unlock_irq(&css_set_lock);
 		mutex_unlock(&cgroup_mutex);
 
 		nsdentry = kernfs_node_dentry(cgrp->kn, dentry->d_sb);
@@ -2361,7 +2221,7 @@ static void cgroup_kill_sb(struct super_block *sb)
 	kernfs_kill_sb(sb);
 }
 
-static struct file_system_type cgroup_fs_type = {
+struct file_system_type cgroup_fs_type = {
 	.name = "cgroup",
 	.mount = cgroup_mount,
 	.kill_sb = cgroup_kill_sb,
@@ -2375,8 +2235,8 @@ static struct file_system_type cgroup2_fs_type = {
 	.fs_flags = FS_USERNS_MOUNT,
 };
 
-static int cgroup_path_ns_locked(struct cgroup *cgrp, char *buf, size_t buflen,
-				 struct cgroup_namespace *ns)
+int cgroup_path_ns_locked(struct cgroup *cgrp, char *buf, size_t buflen,
+			  struct cgroup_namespace *ns)
 {
 	struct cgroup *root = cset_cgroup_from_root(ns->root_cset, cgrp->root);
 
@@ -2389,11 +2249,11 @@ int cgroup_path_ns(struct cgroup *cgrp, char *buf, size_t buflen,
 	int ret;
 
 	mutex_lock(&cgroup_mutex);
-	spin_lock_bh(&css_set_lock);
+	spin_lock_irq(&css_set_lock);
 
 	ret = cgroup_path_ns_locked(cgrp, buf, buflen, ns);
 
-	spin_unlock_bh(&css_set_lock);
+	spin_unlock_irq(&css_set_lock);
 	mutex_unlock(&cgroup_mutex);
 
 	return ret;
@@ -2666,7 +2526,7 @@ out_release_tset:
  * zero for migration destination cgroups with tasks so that child cgroups
  * don't compete against tasks.
  */
-static bool cgroup_may_migrate_to(struct cgroup *dst_cgrp)
+bool cgroup_may_migrate_to(struct cgroup *dst_cgrp)
 {
 	return !cgroup_on_dfl(dst_cgrp) || !cgroup_parent(dst_cgrp) ||
 		!dst_cgrp->subtree_control;
@@ -2679,7 +2539,7 @@ static bool cgroup_may_migrate_to(struct cgroup *dst_cgrp)
  * Undo cgroup_migrate_add_src() and cgroup_migrate_prepare_dst().  See
  * those functions for details.
  */
-static void cgroup_migrate_finish(struct list_head *preloaded_csets)
+void cgroup_migrate_finish(struct list_head *preloaded_csets)
 {
 	struct css_set *cset, *tmp_cset;
 
@@ -2712,9 +2572,9 @@ static void cgroup_migrate_finish(struct list_head *preloaded_csets)
  * into play and the preloaded css_sets are guaranteed to cover all
  * migrations.
  */
-static void cgroup_migrate_add_src(struct css_set *src_cset,
-				   struct cgroup *dst_cgrp,
-				   struct list_head *preloaded_csets)
+void cgroup_migrate_add_src(struct css_set *src_cset,
+			    struct cgroup *dst_cgrp,
+			    struct list_head *preloaded_csets)
 {
 	struct cgroup *src_cgrp;
 
@@ -2759,7 +2619,7 @@ static void cgroup_migrate_add_src(struct css_set *src_cset,
  * using cgroup_migrate(), cgroup_migrate_finish() must be called on
  * @preloaded_csets.
  */
-static int cgroup_migrate_prepare_dst(struct list_head *preloaded_csets)
+int cgroup_migrate_prepare_dst(struct list_head *preloaded_csets)
 {
 	LIST_HEAD(csets);
 	struct css_set *src_cset, *tmp_cset;
@@ -2823,8 +2683,8 @@ err:
  * decided for all targets by invoking group_migrate_prepare_dst() before
  * actually starting migrating.
  */
-static int cgroup_migrate(struct task_struct *leader, bool threadgroup,
-			  struct cgroup_root *root)
+int cgroup_migrate(struct task_struct *leader, bool threadgroup,
+		   struct cgroup_root *root)
 {
 	struct cgroup_taskset tset = CGROUP_TASKSET_INIT(tset);
 	struct task_struct *task;
@@ -2856,8 +2716,8 @@ static int cgroup_migrate(struct task_struct *leader, bool threadgroup,
  *
  * Call holding cgroup_mutex and cgroup_threadgroup_rwsem.
  */
-static int cgroup_attach_task(struct cgroup *dst_cgrp,
-			      struct task_struct *leader, bool threadgroup)
+int cgroup_attach_task(struct cgroup *dst_cgrp, struct task_struct *leader,
+		       bool threadgroup)
 {
 	LIST_HEAD(preloaded_csets);
 	struct task_struct *task;
@@ -2905,7 +2765,6 @@ static int cgroup_procs_write_permission(struct task_struct *task,
 	 * need to check permissions on one of them.
 	 */
 	if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
-	    !uid_eq(cred->euid, GLOBAL_SYSTEM_UID) &&
 	    !uid_eq(cred->euid, tcred->uid) &&
 	    !uid_eq(cred->euid, tcred->suid) &&
 	    !ns_capable(tcred->user_ns, CAP_SYS_NICE))
@@ -2940,12 +2799,13 @@ static int cgroup_procs_write_permission(struct task_struct *task,
  * function to attach either it or all tasks in its threadgroup. Will lock
  * cgroup_mutex and threadgroup.
  */
-static ssize_t __cgroup_procs_write(struct kernfs_open_file *of, char *buf,
-				    size_t nbytes, loff_t off, bool threadgroup)
+ssize_t __cgroup_procs_write(struct kernfs_open_file *of, char *buf,
+			     size_t nbytes, loff_t off, bool threadgroup)
 {
 	struct task_struct *tsk;
 	struct cgroup_subsys *ss;
 	struct cgroup *cgrp;
+	struct sched_param param;
 	pid_t pid;
 	int ssid, ret;
 
@@ -2993,15 +2853,27 @@ static ssize_t __cgroup_procs_write(struct kernfs_open_file *of, char *buf,
 	if (!ret && !threadgroup &&
 	    !strcmp(of->kn->parent->name, "top-app") &&
 	    is_zygote_pid(tsk->parent->pid)) {
-		devfreq_boost_kick_max(DEVFREQ_EXYNOS_MIF, 1250);
+		cpu_input_boost_kick_max(250);
+		devfreq_boost_kick_max(DEVFREQ_EXYNOS_MIF, 500);
 	}
 
-	/* This covers boosting for app launches and app transitions */
-	if (!ret && !threadgroup &&
-	    !strcmp(of->kn->parent->name, "top-app") &&
-	    is_zygote_pid(tsk->parent->pid)) {
-		cpu_input_boost_kick_max(500);
+	param.sched_priority = 0;
+
+	if (sysctl_iosched_boost_top_app && !ret && !strcmp(of->kn->parent->name, "background")) {
+		sched_setscheduler_nocheck(tsk, SCHED_NORMAL, &param);
+	} else if (!strcmp(of->kn->parent->name, "foreground")) {
+		set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_RT, 2));
+		param.sched_priority = 10;
+		sched_setscheduler_nocheck(tsk, SCHED_FIFO | SCHED_RR | SCHED_RESET_ON_FORK, &param);
+	} else if (!strcmp(of->kn->parent->name, "top-app")) {
+		set_task_ioprio(tsk, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_RT, 1));
+		param.sched_priority = 15;
+		sched_setscheduler_nocheck(tsk, SCHED_FIFO | SCHED_RR | SCHED_RESET_ON_FORK, &param);
+	} else {
+		param.sched_priority = 5;
+		sched_setscheduler_nocheck(tsk, SCHED_NORMAL, &param);
 	}
+
 
 	put_task_struct(tsk);
 	goto out_unlock_threadgroup;
@@ -3017,92 +2889,10 @@ out_unlock_threadgroup:
 	return ret ?: nbytes;
 }
 
-/**
- * cgroup_attach_task_all - attach task 'tsk' to all cgroups of task 'from'
- * @from: attach to all cgroups of a given task
- * @tsk: the task to be attached
- */
-int cgroup_attach_task_all(struct task_struct *from, struct task_struct *tsk)
-{
-	struct cgroup_root *root;
-	int retval = 0;
-
-	mutex_lock(&cgroup_mutex);
-	percpu_down_write(&cgroup_threadgroup_rwsem);
-	for_each_root(root) {
-		struct cgroup *from_cgrp;
-
-		if (root == &cgrp_dfl_root)
-			continue;
-
-		spin_lock_irq(&css_set_lock);
-		from_cgrp = task_cgroup_from_root(from, root);
-		spin_unlock_irq(&css_set_lock);
-
-		retval = cgroup_attach_task(from_cgrp, tsk, false);
-		if (retval)
-			break;
-	}
-	percpu_up_write(&cgroup_threadgroup_rwsem);
-	mutex_unlock(&cgroup_mutex);
-
-	return retval;
-}
-EXPORT_SYMBOL_GPL(cgroup_attach_task_all);
-
-static ssize_t cgroup_tasks_write(struct kernfs_open_file *of,
-				  char *buf, size_t nbytes, loff_t off)
-{
-	return __cgroup_procs_write(of, buf, nbytes, off, false);
-}
-
-static ssize_t cgroup_procs_write(struct kernfs_open_file *of,
-				  char *buf, size_t nbytes, loff_t off)
+ssize_t cgroup_procs_write(struct kernfs_open_file *of, char *buf, size_t nbytes,
+			   loff_t off)
 {
 	return __cgroup_procs_write(of, buf, nbytes, off, true);
-}
-
-static ssize_t cgroup_release_agent_write(struct kernfs_open_file *of,
-					  char *buf, size_t nbytes, loff_t off)
-{
-	struct cgroup *cgrp;
-
-	BUILD_BUG_ON(sizeof(cgrp->root->release_agent_path) < PATH_MAX);
-
-	/*
-	 * Release agent gets called with all capabilities,
-	 * require capabilities to set release agent.
-	 */
-	if ((of->file->f_cred->user_ns != &init_user_ns) ||
-	    !capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
-	cgrp = cgroup_kn_lock_live(of->kn, false);
-	if (!cgrp)
-		return -ENODEV;
-	spin_lock(&release_agent_path_lock);
-	strlcpy(cgrp->root->release_agent_path, strstrip(buf),
-		sizeof(cgrp->root->release_agent_path));
-	spin_unlock(&release_agent_path_lock);
-	cgroup_kn_unlock(of->kn);
-	return nbytes;
-}
-
-static int cgroup_release_agent_show(struct seq_file *seq, void *v)
-{
-	struct cgroup *cgrp = seq_css(seq)->cgroup;
-
-	spin_lock(&release_agent_path_lock);
-	seq_puts(seq, cgrp->root->release_agent_path);
-	spin_unlock(&release_agent_path_lock);
-	seq_putc(seq, '\n');
-	return 0;
-}
-
-static int cgroup_sane_behavior_show(struct seq_file *seq, void *v)
-{
-	seq_puts(seq, "0\n");
-	return 0;
 }
 
 static void cgroup_print_ss_mask(struct seq_file *seq, u16 ss_mask)
@@ -3206,7 +2996,7 @@ out_finish:
  * controller while the previous css is still around.  This function grabs
  * cgroup_mutex and drains the previous css instances of @cgrp's subtree.
  */
-static void cgroup_lock_and_drain_offline(struct cgroup *cgrp)
+void cgroup_lock_and_drain_offline(struct cgroup *cgrp)
 	__acquires(&cgroup_mutex)
 {
 	struct cgroup *dsct;
@@ -3561,11 +3351,11 @@ static ssize_t cgroup_subtree_control_write(struct kernfs_open_file *of,
 	cgrp->subtree_control &= ~disable;
 
 	ret = cgroup_apply_control(cgrp);
-
 	cgroup_finalize_control(cgrp, ret);
+	if (ret)
+		goto out_unlock;
 
 	kernfs_activate(cgrp->kn);
-	ret = 0;
 out_unlock:
 	cgroup_kn_unlock(of->kn);
 	return ret ?: nbytes;
@@ -3577,6 +3367,79 @@ static int cgroup_events_show(struct seq_file *seq, void *v)
 		   cgroup_is_populated(seq_css(seq)->cgroup));
 	return 0;
 }
+
+#ifdef CONFIG_PSI
+static int cgroup_io_pressure_show(struct seq_file *seq, void *v)
+{
+	return psi_show(seq, &seq_css(seq)->cgroup->psi, PSI_IO);
+}
+static int cgroup_memory_pressure_show(struct seq_file *seq, void *v)
+{
+	return psi_show(seq, &seq_css(seq)->cgroup->psi, PSI_MEM);
+}
+static int cgroup_cpu_pressure_show(struct seq_file *seq, void *v)
+{
+	return psi_show(seq, &seq_css(seq)->cgroup->psi, PSI_CPU);
+}
+
+static ssize_t cgroup_pressure_write(struct kernfs_open_file *of, char *buf,
+					  size_t nbytes, enum psi_res res)
+{
+	struct psi_trigger *new;
+	struct cgroup *cgrp;
+
+	cgrp = cgroup_kn_lock_live(of->kn, false);
+	if (!cgrp)
+		return -ENODEV;
+
+	cgroup_get(cgrp);
+	cgroup_kn_unlock(of->kn);
+
+	new = psi_trigger_create(&cgrp->psi, buf, nbytes, res);
+	if (IS_ERR(new)) {
+		cgroup_put(cgrp);
+		return PTR_ERR(new);
+	}
+
+	psi_trigger_replace(&of->priv, new);
+
+	cgroup_put(cgrp);
+
+	return nbytes;
+}
+
+static ssize_t cgroup_io_pressure_write(struct kernfs_open_file *of,
+					  char *buf, size_t nbytes,
+					  loff_t off)
+{
+	return cgroup_pressure_write(of, buf, nbytes, PSI_IO);
+}
+
+static ssize_t cgroup_memory_pressure_write(struct kernfs_open_file *of,
+					  char *buf, size_t nbytes,
+					  loff_t off)
+{
+	return cgroup_pressure_write(of, buf, nbytes, PSI_MEM);
+}
+
+static ssize_t cgroup_cpu_pressure_write(struct kernfs_open_file *of,
+					  char *buf, size_t nbytes,
+					  loff_t off)
+{
+	return cgroup_pressure_write(of, buf, nbytes, PSI_CPU);
+}
+
+static unsigned int cgroup_pressure_poll(struct kernfs_open_file *of,
+					 poll_table *pt)
+{
+	return psi_trigger_poll(&of->priv, of->file, pt);
+}
+
+static void cgroup_pressure_release(struct kernfs_open_file *of)
+{
+	psi_trigger_replace(&of->priv, NULL);
+}
+#endif /* CONFIG_PSI */
 
 static int cgroup_file_open(struct kernfs_open_file *of)
 {
@@ -3696,52 +3559,6 @@ static struct kernfs_ops cgroup_kf_ops = {
 	.seq_stop		= cgroup_seqfile_stop,
 	.seq_show		= cgroup_seqfile_show,
 };
-
-/*
- * cgroup_rename - Only allow simple rename of directories in place.
- */
-static int cgroup_rename(struct kernfs_node *kn, struct kernfs_node *new_parent,
-			 const char *new_name_str)
-{
-	struct cgroup *cgrp = kn->priv;
-	int ret;
-
-	/* do not accept '\n' to prevent making /proc/<pid>/cgroup unparsable */
-	if (strchr(new_name_str, '\n'))
-		return -EINVAL;
-
-	if (kernfs_type(kn) != KERNFS_DIR)
-		return -ENOTDIR;
-	if (kn->parent != new_parent)
-		return -EIO;
-
-	/*
-	 * This isn't a proper migration and its usefulness is very
-	 * limited.  Disallow on the default hierarchy.
-	 */
-	if (cgroup_on_dfl(cgrp))
-		return -EPERM;
-
-	/*
-	 * We're gonna grab cgroup_mutex which nests outside kernfs
-	 * active_ref.  kernfs_rename() doesn't require active_ref
-	 * protection.  Break them before grabbing cgroup_mutex.
-	 */
-	kernfs_break_active_protection(new_parent);
-	kernfs_break_active_protection(kn);
-
-	mutex_lock(&cgroup_mutex);
-
-	ret = kernfs_rename(kn, new_parent, new_name_str);
-	if (!ret)
-		trace_cgroup_rename(cgrp);
-
-	mutex_unlock(&cgroup_mutex);
-
-	kernfs_unbreak_active_protection(kn);
-	kernfs_unbreak_active_protection(new_parent);
-	return ret;
-}
 
 /* set uid and gid of cgroup dirs and files to that of the creator */
 static int cgroup_kn_set_ugid(struct kernfs_node *kn)
@@ -4036,26 +3853,6 @@ void cgroup_file_notify(struct cgroup_file *cfile)
 	if (cfile->kn)
 		kernfs_notify(cfile->kn);
 	spin_unlock_irqrestore(&cgroup_file_kn_lock, flags);
-}
-
-/**
- * cgroup_task_count - count the number of tasks in a cgroup.
- * @cgrp: the cgroup in question
- *
- * Return the number of tasks in the cgroup.  The returned number can be
- * higher than the actual number of tasks due to css_set references from
- * namespace roots and temporary usages.
- */
-static int cgroup_task_count(const struct cgroup *cgrp)
-{
-	int count = 0;
-	struct cgrp_cset_link *link;
-
-	spin_lock_irq(&css_set_lock);
-	list_for_each_entry(link, &cgrp->cset_links, cset_link)
-		count += atomic_read(&link->cset->refcount);
-	spin_unlock_irq(&css_set_lock);
-	return count;
 }
 
 /**
@@ -4456,551 +4253,57 @@ void css_task_iter_end(struct css_task_iter *it)
 		put_task_struct(it->cur_task);
 }
 
-/**
- * cgroup_trasnsfer_tasks - move tasks from one cgroup to another
- * @to: cgroup to which the tasks will be moved
- * @from: cgroup in which the tasks currently reside
- *
- * Locking rules between cgroup_post_fork() and the migration path
- * guarantee that, if a task is forking while being migrated, the new child
- * is guaranteed to be either visible in the source cgroup after the
- * parent's migration is complete or put into the target cgroup.  No task
- * can slip out of migration through forking.
- */
-int cgroup_transfer_tasks(struct cgroup *to, struct cgroup *from)
+static void cgroup_procs_release(struct kernfs_open_file *of)
 {
-	LIST_HEAD(preloaded_csets);
-	struct cgrp_cset_link *link;
-	struct css_task_iter it;
+	if (of->priv) {
+		css_task_iter_end(of->priv);
+		kfree(of->priv);
+	}
+}
+
+static void *cgroup_procs_next(struct seq_file *s, void *v, loff_t *pos)
+{
+	struct kernfs_open_file *of = s->private;
+	struct css_task_iter *it = of->priv;
 	struct task_struct *task;
-	int ret;
 
-	if (!cgroup_may_migrate_to(to))
-		return -EBUSY;
-
-	mutex_lock(&cgroup_mutex);
-
-	percpu_down_write(&cgroup_threadgroup_rwsem);
-
-	/* all tasks in @from are being moved, all csets are source */
-	spin_lock_irq(&css_set_lock);
-	list_for_each_entry(link, &from->cset_links, cset_link)
-		cgroup_migrate_add_src(link->cset, to, &preloaded_csets);
-	spin_unlock_irq(&css_set_lock);
-
-	ret = cgroup_migrate_prepare_dst(&preloaded_csets);
-	if (ret)
-		goto out_err;
-
-	/*
-	 * Migrate tasks one-by-one until @from is empty.  This fails iff
-	 * ->can_attach() fails.
-	 */
 	do {
-		css_task_iter_start(&from->self, &it);
+		task = css_task_iter_next(it);
+	} while (task && !thread_group_leader(task));
 
-		do {
-			task = css_task_iter_next(&it);
-		} while (task && (task->flags & PF_EXITING));
-
-		if (task)
-			get_task_struct(task);
-		css_task_iter_end(&it);
-
-		if (task) {
-			ret = cgroup_migrate(task, false, to->root);
-			if (!ret)
-				trace_cgroup_transfer_tasks(to, task, false);
-			put_task_struct(task);
-		}
-	} while (task && !ret);
-out_err:
-	cgroup_migrate_finish(&preloaded_csets);
-	percpu_up_write(&cgroup_threadgroup_rwsem);
-	mutex_unlock(&cgroup_mutex);
-	return ret;
+	return task;
 }
 
-/*
- * Stuff for reading the 'tasks'/'procs' files.
- *
- * Reading this file can return large amounts of data if a cgroup has
- * *lots* of attached tasks. So it may need several calls to read(),
- * but we cannot guarantee that the information we produce is correct
- * unless we produce it entirely atomically.
- *
- */
-
-/* which pidlist file are we talking about? */
-enum cgroup_filetype {
-	CGROUP_FILE_PROCS,
-	CGROUP_FILE_TASKS,
-};
-
-/*
- * A pidlist is a list of pids that virtually represents the contents of one
- * of the cgroup files ("procs" or "tasks"). We keep a list of such pidlists,
- * a pair (one each for procs, tasks) for each pid namespace that's relevant
- * to the cgroup.
- */
-struct cgroup_pidlist {
-	/*
-	 * used to find which pidlist is wanted. doesn't change as long as
-	 * this particular list stays in the list.
-	*/
-	struct { enum cgroup_filetype type; struct pid_namespace *ns; } key;
-	/* array of xids */
-	pid_t *list;
-	/* how many elements the above list has */
-	int length;
-	/* each of these stored in a list by its cgroup */
-	struct list_head links;
-	/* pointer to the cgroup we belong to, for list removal purposes */
-	struct cgroup *owner;
-	/* for delayed destruction */
-	struct delayed_work destroy_dwork;
-};
-
-/*
- * The following two functions "fix" the issue where there are more pids
- * than kmalloc will give memory for; in such cases, we use vmalloc/vfree.
- * TODO: replace with a kernel-wide solution to this problem
- */
-#define PIDLIST_TOO_LARGE(c) ((c) * sizeof(pid_t) > (PAGE_SIZE * 2))
-static void *pidlist_allocate(int count)
+static void *cgroup_procs_start(struct seq_file *s, loff_t *pos)
 {
-	if (PIDLIST_TOO_LARGE(count))
-		return vmalloc(count * sizeof(pid_t));
-	else
-		return kmalloc(count * sizeof(pid_t), GFP_KERNEL);
-}
-
-static void pidlist_free(void *p)
-{
-	kvfree(p);
-}
-
-/*
- * Used to destroy all pidlists lingering waiting for destroy timer.  None
- * should be left afterwards.
- */
-static void cgroup_pidlist_destroy_all(struct cgroup *cgrp)
-{
-	struct cgroup_pidlist *l, *tmp_l;
-
-	mutex_lock(&cgrp->pidlist_mutex);
-	list_for_each_entry_safe(l, tmp_l, &cgrp->pidlists, links)
-		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork, 0);
-	mutex_unlock(&cgrp->pidlist_mutex);
-
-	flush_workqueue(cgroup_pidlist_destroy_wq);
-	BUG_ON(!list_empty(&cgrp->pidlists));
-}
-
-static void cgroup_pidlist_destroy_work_fn(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct cgroup_pidlist *l = container_of(dwork, struct cgroup_pidlist,
-						destroy_dwork);
-	struct cgroup_pidlist *tofree = NULL;
-
-	mutex_lock(&l->owner->pidlist_mutex);
-
-	/*
-	 * Destroy iff we didn't get queued again.  The state won't change
-	 * as destroy_dwork can only be queued while locked.
-	 */
-	if (!delayed_work_pending(dwork)) {
-		list_del(&l->links);
-		pidlist_free(l->list);
-		put_pid_ns(l->key.ns);
-		tofree = l;
-	}
-
-	mutex_unlock(&l->owner->pidlist_mutex);
-	kfree(tofree);
-}
-
-/*
- * pidlist_uniq - given a kmalloc()ed list, strip out all duplicate entries
- * Returns the number of unique elements.
- */
-static int pidlist_uniq(pid_t *list, int length)
-{
-	int src, dest = 1;
-
-	/*
-	 * we presume the 0th element is unique, so i starts at 1. trivial
-	 * edge cases first; no work needs to be done for either
-	 */
-	if (length == 0 || length == 1)
-		return length;
-	/* src and dest walk down the list; dest counts unique elements */
-	for (src = 1; src < length; src++) {
-		/* find next unique element */
-		while (list[src] == list[src-1]) {
-			src++;
-			if (src == length)
-				goto after;
-		}
-		/* dest always points to where the next unique element goes */
-		list[dest] = list[src];
-		dest++;
-	}
-after:
-	return dest;
-}
-
-/*
- * The two pid files - task and cgroup.procs - guaranteed that the result
- * is sorted, which forced this whole pidlist fiasco.  As pid order is
- * different per namespace, each namespace needs differently sorted list,
- * making it impossible to use, for example, single rbtree of member tasks
- * sorted by task pointer.  As pidlists can be fairly large, allocating one
- * per open file is dangerous, so cgroup had to implement shared pool of
- * pidlists keyed by cgroup and namespace.
- *
- * All this extra complexity was caused by the original implementation
- * committing to an entirely unnecessary property.  In the long term, we
- * want to do away with it.  Explicitly scramble sort order if on the
- * default hierarchy so that no such expectation exists in the new
- * interface.
- *
- * Scrambling is done by swapping every two consecutive bits, which is
- * non-identity one-to-one mapping which disturbs sort order sufficiently.
- */
-static pid_t pid_fry(pid_t pid)
-{
-	unsigned a = pid & 0x55555555;
-	unsigned b = pid & 0xAAAAAAAA;
-
-	return (a << 1) | (b >> 1);
-}
-
-static pid_t cgroup_pid_fry(struct cgroup *cgrp, pid_t pid)
-{
-	if (cgroup_on_dfl(cgrp))
-		return pid_fry(pid);
-	else
-		return pid;
-}
-
-static int cmppid(const void *a, const void *b)
-{
-	return *(pid_t *)a - *(pid_t *)b;
-}
-
-static int fried_cmppid(const void *a, const void *b)
-{
-	return pid_fry(*(pid_t *)a) - pid_fry(*(pid_t *)b);
-}
-
-static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
-						  enum cgroup_filetype type)
-{
-	struct cgroup_pidlist *l;
-	/* don't need task_nsproxy() if we're looking at ourself */
-	struct pid_namespace *ns = task_active_pid_ns(current);
-
-	lockdep_assert_held(&cgrp->pidlist_mutex);
-
-	list_for_each_entry(l, &cgrp->pidlists, links)
-		if (l->key.type == type && l->key.ns == ns)
-			return l;
-	return NULL;
-}
-
-/*
- * find the appropriate pidlist for our purpose (given procs vs tasks)
- * returns with the lock on that pidlist already held, and takes care
- * of the use count, or returns NULL with no locks held if we're out of
- * memory.
- */
-static struct cgroup_pidlist *cgroup_pidlist_find_create(struct cgroup *cgrp,
-						enum cgroup_filetype type)
-{
-	struct cgroup_pidlist *l;
-
-	lockdep_assert_held(&cgrp->pidlist_mutex);
-
-	l = cgroup_pidlist_find(cgrp, type);
-	if (l)
-		return l;
-
-	/* entry not found; create a new one */
-	l = kzalloc(sizeof(struct cgroup_pidlist), GFP_KERNEL);
-	if (!l)
-		return l;
-
-	INIT_DELAYED_WORK(&l->destroy_dwork, cgroup_pidlist_destroy_work_fn);
-	l->key.type = type;
-	/* don't need task_nsproxy() if we're looking at ourself */
-	l->key.ns = get_pid_ns(task_active_pid_ns(current));
-	l->owner = cgrp;
-	list_add(&l->links, &cgrp->pidlists);
-	return l;
-}
-
-/*
- * Load a cgroup's pidarray with either procs' tgids or tasks' pids
- */
-static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
-			      struct cgroup_pidlist **lp)
-{
-	pid_t *array;
-	int length;
-	int pid, n = 0; /* used for populating the array */
-	struct css_task_iter it;
-	struct task_struct *tsk;
-	struct cgroup_pidlist *l;
-
-	lockdep_assert_held(&cgrp->pidlist_mutex);
-
-	/*
-	 * If cgroup gets more users after we read count, we won't have
-	 * enough space - tough.  This race is indistinguishable to the
-	 * caller from the case that the additional cgroup users didn't
-	 * show up until sometime later on.
-	 */
-	length = cgroup_task_count(cgrp);
-	array = pidlist_allocate(length);
-	if (!array)
-		return -ENOMEM;
-	/* now, populate the array */
-	css_task_iter_start(&cgrp->self, &it);
-	while ((tsk = css_task_iter_next(&it))) {
-		if (unlikely(n == length))
-			break;
-		/* get tgid or pid for procs or tasks file respectively */
-		if (type == CGROUP_FILE_PROCS)
-			pid = task_tgid_vnr(tsk);
-		else
-			pid = task_pid_vnr(tsk);
-		if (pid > 0) /* make sure to only use valid results */
-			array[n++] = pid;
-	}
-	css_task_iter_end(&it);
-	length = n;
-	/* now sort & (if procs) strip out duplicates */
-	if (cgroup_on_dfl(cgrp))
-		sort(array, length, sizeof(pid_t), fried_cmppid, NULL);
-	else
-		sort(array, length, sizeof(pid_t), cmppid, NULL);
-	if (type == CGROUP_FILE_PROCS)
-		length = pidlist_uniq(array, length);
-
-	l = cgroup_pidlist_find_create(cgrp, type);
-	if (!l) {
-		pidlist_free(array);
-		return -ENOMEM;
-	}
-
-	/* store array, freeing old if necessary */
-	pidlist_free(l->list);
-	l->list = array;
-	l->length = length;
-	*lp = l;
-	return 0;
-}
-
-/**
- * cgroupstats_build - build and fill cgroupstats
- * @stats: cgroupstats to fill information into
- * @dentry: A dentry entry belonging to the cgroup for which stats have
- * been requested.
- *
- * Build and fill cgroupstats so that taskstats can export it to user
- * space.
- */
-int cgroupstats_build(struct cgroupstats *stats, struct dentry *dentry)
-{
-	struct kernfs_node *kn = kernfs_node_from_dentry(dentry);
-	struct cgroup *cgrp;
-	struct css_task_iter it;
-	struct task_struct *tsk;
-
-	/* it should be kernfs_node belonging to cgroupfs and is a directory */
-	if (dentry->d_sb->s_type != &cgroup_fs_type || !kn ||
-	    kernfs_type(kn) != KERNFS_DIR)
-		return -EINVAL;
-
-	mutex_lock(&cgroup_mutex);
-
-	/*
-	 * We aren't being called from kernfs and there's no guarantee on
-	 * @kn->priv's validity.  For this and css_tryget_online_from_dir(),
-	 * @kn->priv is RCU safe.  Let's do the RCU dancing.
-	 */
-	rcu_read_lock();
-	cgrp = rcu_dereference(kn->priv);
-	if (!cgrp || cgroup_is_dead(cgrp)) {
-		rcu_read_unlock();
-		mutex_unlock(&cgroup_mutex);
-		return -ENOENT;
-	}
-	rcu_read_unlock();
-
-	css_task_iter_start(&cgrp->self, &it);
-	while ((tsk = css_task_iter_next(&it))) {
-		switch (tsk->state) {
-		case TASK_RUNNING:
-			stats->nr_running++;
-			break;
-		case TASK_INTERRUPTIBLE:
-			stats->nr_sleeping++;
-			break;
-		case TASK_UNINTERRUPTIBLE:
-			stats->nr_uninterruptible++;
-			break;
-		case TASK_STOPPED:
-			stats->nr_stopped++;
-			break;
-		default:
-			if (delayacct_is_task_waiting_on_io(tsk))
-				stats->nr_io_wait++;
-			break;
-		}
-	}
-	css_task_iter_end(&it);
-
-	mutex_unlock(&cgroup_mutex);
-	return 0;
-}
-
-
-/*
- * seq_file methods for the tasks/procs files. The seq_file position is the
- * next pid to display; the seq_file iterator is a pointer to the pid
- * in the cgroup->l->list array.
- */
-
-static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
-{
-	/*
-	 * Initially we receive a position value that corresponds to
-	 * one more than the last pid shown (or 0 on the first call or
-	 * after a seek to the start). Use a binary-search to find the
-	 * next pid to display, if any
-	 */
 	struct kernfs_open_file *of = s->private;
 	struct cgroup *cgrp = seq_css(s)->cgroup;
-	struct cgroup_pidlist *l;
-	enum cgroup_filetype type = seq_cft(s)->private;
-	int index = 0, pid = *pos;
-	int *iter, ret;
-
-	mutex_lock(&cgrp->pidlist_mutex);
+	struct css_task_iter *it = of->priv;
 
 	/*
-	 * !NULL @of->priv indicates that this isn't the first start()
-	 * after open.  If the matching pidlist is around, we can use that.
-	 * Look for it.  Note that @of->priv can't be used directly.  It
-	 * could already have been destroyed.
+	 * When a seq_file is seeked, it's always traversed sequentially
+	 * from position 0, so we can simply keep iterating on !0 *pos.
 	 */
-	if (of->priv)
-		of->priv = cgroup_pidlist_find(cgrp, type);
+	if (!it) {
+		if (WARN_ON_ONCE((*pos)++))
+			return ERR_PTR(-EINVAL);
 
-	/*
-	 * Either this is the first start() after open or the matching
-	 * pidlist has been destroyed inbetween.  Create a new one.
-	 */
-	if (!of->priv) {
-		ret = pidlist_array_load(cgrp, type,
-					 (struct cgroup_pidlist **)&of->priv);
-		if (ret)
-			return ERR_PTR(ret);
+		it = kzalloc(sizeof(*it), GFP_KERNEL);
+		if (!it)
+			return ERR_PTR(-ENOMEM);
+		of->priv = it;
+		css_task_iter_start(&cgrp->self, it);
+	} else if (!(*pos)++) {
+		css_task_iter_end(it);
+		css_task_iter_start(&cgrp->self, it);
 	}
-	l = of->priv;
 
-	if (pid) {
-		int end = l->length;
-
-		while (index < end) {
-			int mid = (index + end) / 2;
-			if (cgroup_pid_fry(cgrp, l->list[mid]) == pid) {
-				index = mid;
-				break;
-			} else if (cgroup_pid_fry(cgrp, l->list[mid]) <= pid)
-				index = mid + 1;
-			else
-				end = mid;
-		}
-	}
-	/* If we're off the end of the array, we're done */
-	if (index >= l->length)
-		return NULL;
-	/* Update the abstract position to be the actual pid that we found */
-	iter = l->list + index;
-	*pos = cgroup_pid_fry(cgrp, *iter);
-	return iter;
+	return cgroup_procs_next(s, NULL, NULL);
 }
 
-static void cgroup_pidlist_stop(struct seq_file *s, void *v)
+static int cgroup_procs_show(struct seq_file *s, void *v)
 {
-	struct kernfs_open_file *of = s->private;
-	struct cgroup_pidlist *l = of->priv;
-
-	if (l)
-		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork,
-				 CGROUP_PIDLIST_DESTROY_DELAY);
-	mutex_unlock(&seq_css(s)->cgroup->pidlist_mutex);
-}
-
-static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
-{
-	struct kernfs_open_file *of = s->private;
-	struct cgroup_pidlist *l = of->priv;
-	pid_t *p = v;
-	pid_t *end = l->list + l->length;
-	/*
-	 * Advance to the next pid in the array. If this goes off the
-	 * end, we're done
-	 */
-	p++;
-	if (p >= end) {
-		return NULL;
-	} else {
-		*pos = cgroup_pid_fry(seq_css(s)->cgroup, *p);
-		return p;
-	}
-}
-
-static int cgroup_pidlist_show(struct seq_file *s, void *v)
-{
-	seq_printf(s, "%d\n", *(int *)v);
-
-	return 0;
-}
-
-static u64 cgroup_read_notify_on_release(struct cgroup_subsys_state *css,
-					 struct cftype *cft)
-{
-	return notify_on_release(css->cgroup);
-}
-
-static int cgroup_write_notify_on_release(struct cgroup_subsys_state *css,
-					  struct cftype *cft, u64 val)
-{
-	if (val)
-		set_bit(CGRP_NOTIFY_ON_RELEASE, &css->cgroup->flags);
-	else
-		clear_bit(CGRP_NOTIFY_ON_RELEASE, &css->cgroup->flags);
-	return 0;
-}
-
-static u64 cgroup_clone_children_read(struct cgroup_subsys_state *css,
-				      struct cftype *cft)
-{
-	return test_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags);
-}
-
-static int cgroup_clone_children_write(struct cgroup_subsys_state *css,
-				       struct cftype *cft, u64 val)
-{
-	if (val)
-		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags);
-	else
-		clear_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags);
+	seq_printf(s, "%d\n", task_tgid_vnr(v));
 	return 0;
 }
 
@@ -5009,11 +4312,10 @@ static struct cftype cgroup_dfl_base_files[] = {
 	{
 		.name = "cgroup.procs",
 		.file_offset = offsetof(struct cgroup, procs_file),
-		.seq_start = cgroup_pidlist_start,
-		.seq_next = cgroup_pidlist_next,
-		.seq_stop = cgroup_pidlist_stop,
-		.seq_show = cgroup_pidlist_show,
-		.private = CGROUP_FILE_PROCS,
+		.release = cgroup_procs_release,
+		.seq_start = cgroup_procs_start,
+		.seq_next = cgroup_procs_next,
+		.seq_show = cgroup_procs_show,
 		.write = cgroup_procs_write,
 	},
 	{
@@ -5031,51 +4333,32 @@ static struct cftype cgroup_dfl_base_files[] = {
 		.file_offset = offsetof(struct cgroup, events_file),
 		.seq_show = cgroup_events_show,
 	},
-	{ }	/* terminate */
-};
-
-/* cgroup core interface files for the legacy hierarchies */
-static struct cftype cgroup_legacy_base_files[] = {
+#ifdef CONFIG_PSI
 	{
-		.name = "cgroup.procs",
-		.seq_start = cgroup_pidlist_start,
-		.seq_next = cgroup_pidlist_next,
-		.seq_stop = cgroup_pidlist_stop,
-		.seq_show = cgroup_pidlist_show,
-		.private = CGROUP_FILE_PROCS,
-		.write = cgroup_procs_write,
+		.name = "io.pressure",
+		.flags = CFTYPE_NOT_ON_ROOT,
+		.seq_show = cgroup_io_pressure_show,
+		.write = cgroup_io_pressure_write,
+		.poll = cgroup_pressure_poll,
+		.release = cgroup_pressure_release,
 	},
 	{
-		.name = "cgroup.clone_children",
-		.read_u64 = cgroup_clone_children_read,
-		.write_u64 = cgroup_clone_children_write,
+		.name = "memory.pressure",
+		.flags = CFTYPE_NOT_ON_ROOT,
+		.seq_show = cgroup_memory_pressure_show,
+		.write = cgroup_memory_pressure_write,
+		.poll = cgroup_pressure_poll,
+		.release = cgroup_pressure_release,
 	},
 	{
-		.name = "cgroup.sane_behavior",
-		.flags = CFTYPE_ONLY_ON_ROOT,
-		.seq_show = cgroup_sane_behavior_show,
+		.name = "cpu.pressure",
+		.flags = CFTYPE_NOT_ON_ROOT,
+		.seq_show = cgroup_cpu_pressure_show,
+		.write = cgroup_cpu_pressure_write,
+		.poll = cgroup_pressure_poll,
+		.release = cgroup_pressure_release,
 	},
-	{
-		.name = "tasks",
-		.seq_start = cgroup_pidlist_start,
-		.seq_next = cgroup_pidlist_next,
-		.seq_stop = cgroup_pidlist_stop,
-		.seq_show = cgroup_pidlist_show,
-		.private = CGROUP_FILE_TASKS,
-		.write = cgroup_tasks_write,
-	},
-	{
-		.name = "notify_on_release",
-		.read_u64 = cgroup_read_notify_on_release,
-		.write_u64 = cgroup_write_notify_on_release,
-	},
-	{
-		.name = "release_agent",
-		.flags = CFTYPE_ONLY_ON_ROOT,
-		.seq_show = cgroup_release_agent_show,
-		.write = cgroup_release_agent_write,
-		.max_write_len = PATH_MAX - 1,
-	},
+#endif /* CONFIG_PSI */
 	{ }	/* terminate */
 };
 
@@ -5101,10 +4384,10 @@ static struct cftype cgroup_legacy_base_files[] = {
  * and thus involve punting to css->destroy_work adding two additional
  * steps to the already complex sequence.
  */
-static void css_free_work_fn(struct work_struct *work)
+static void css_free_rwork_fn(struct work_struct *work)
 {
-	struct cgroup_subsys_state *css =
-		container_of(work, struct cgroup_subsys_state, destroy_work);
+	struct cgroup_subsys_state *css = container_of(to_rcu_work(work),
+				struct cgroup_subsys_state, destroy_rwork);
 	struct cgroup_subsys *ss = css->ss;
 	struct cgroup *cgrp = css->cgroup;
 
@@ -5136,6 +4419,8 @@ static void css_free_work_fn(struct work_struct *work)
 			 */
 			cgroup_put(cgroup_parent(cgrp));
 			kernfs_put(cgrp->kn);
+			if (cgroup_on_dfl(cgrp))
+				psi_cgroup_free(cgrp);
 			kfree(cgrp);
 		} else {
 			/*
@@ -5146,15 +4431,6 @@ static void css_free_work_fn(struct work_struct *work)
 			cgroup_destroy_root(cgrp->root);
 		}
 	}
-}
-
-static void css_free_rcu_fn(struct rcu_head *rcu_head)
-{
-	struct cgroup_subsys_state *css =
-		container_of(rcu_head, struct cgroup_subsys_state, rcu_head);
-
-	INIT_WORK(&css->destroy_work, css_free_work_fn);
-	queue_work(cgroup_destroy_wq, &css->destroy_work);
 }
 
 static void css_release_work_fn(struct work_struct *work)
@@ -5197,7 +4473,8 @@ static void css_release_work_fn(struct work_struct *work)
 
 	mutex_unlock(&cgroup_mutex);
 
-	call_rcu(&css->rcu_head, css_free_rcu_fn);
+	INIT_RCU_WORK(&css->destroy_rwork, css_free_rwork_fn);
+	queue_rcu_work(cgroup_destroy_wq, &css->destroy_rwork);
 }
 
 static void css_release(struct percpu_ref *ref)
@@ -5334,7 +4611,8 @@ static struct cgroup_subsys_state *css_create(struct cgroup *cgrp,
 err_list_del:
 	list_del_rcu(&css->sibling);
 err_free_css:
-	call_rcu(&css->rcu_head, css_free_rcu_fn);
+	INIT_RCU_WORK(&css->destroy_rwork, css_free_rwork_fn);
+	queue_rcu_work(cgroup_destroy_wq, &css->destroy_rwork);
 	return ERR_PTR(err);
 }
 
@@ -5376,10 +4654,8 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 	cgrp->root = root;
 	cgrp->level = level;
 	ret = cgroup_bpf_inherit(cgrp);
-	if (ret) {
-		cgroup_idr_remove(&root->cgroup_idr, cgrp->id);
-		goto out_cancel_ref;
-	}
+	if (ret)
+		goto out_idr_free;
 
 	for (tcgrp = cgrp; tcgrp; tcgrp = cgroup_parent(tcgrp))
 		cgrp->ancestor_ids[tcgrp->level] = tcgrp->id;
@@ -5410,10 +4686,18 @@ static struct cgroup *cgroup_create(struct cgroup *parent)
 	if (!cgroup_on_dfl(cgrp))
 		cgrp->subtree_control = cgroup_control(cgrp);
 
+	if (cgroup_on_dfl(cgrp)) {
+		ret = psi_cgroup_alloc(cgrp);
+		if (ret)
+			goto out_idr_free;
+	}
+
 	cgroup_propagate_control(cgrp);
 
 	return cgrp;
 
+out_idr_free:
+	cgroup_idr_remove(&root->cgroup_idr, cgrp->id);
 out_cancel_ref:
 	percpu_ref_exit(&cgrp->self.refcnt);
 out_free_cgrp:
@@ -5529,6 +4813,11 @@ static void css_killed_ref_fn(struct percpu_ref *ref)
 static void kill_css(struct cgroup_subsys_state *css)
 {
 	lockdep_assert_held(&cgroup_mutex);
+
+	if (css->flags & CSS_DYING)
+		return;
+
+	css->flags |= CSS_DYING;
 
 	/*
 	 * This must happen before css is disassociated with its cgroup.
@@ -5763,6 +5052,9 @@ int __init cgroup_init(void)
 	struct cgroup_subsys *ss;
 	int ssid;
 
+	cgrp_cset_pool = KMEM_CACHE(css_set, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+	cgrp_cset_link_pool = KMEM_CACHE(cgrp_cset_link, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+
 	BUILD_BUG_ON(CGROUP_SUBSYS_COUNT > 16);
 	BUG_ON(percpu_init_rwsem(&cgroup_threadgroup_rwsem));
 	BUG_ON(cgroup_init_cftypes(NULL, cgroup_dfl_base_files));
@@ -5836,6 +5128,10 @@ int __init cgroup_init(void)
 
 		if (ss->bind)
 			ss->bind(init_css_set.subsys[ssid]);
+
+		mutex_lock(&cgroup_mutex);
+		css_populate_dir(init_css_set.subsys[ssid]);
+		mutex_unlock(&cgroup_mutex);
 	}
 
 	/* init_css_set.subsys[] has been updated, re-hash */
@@ -5851,48 +5147,6 @@ int __init cgroup_init(void)
 	return 0;
 }
 
-static u64 power_of_ten(int power)
-{
-	u64 v = 1;
-	while (power--)
-		v *= 10;
-	return v;
-}
-
-/**
- * cgroup_parse_float - parse a floating number
- * @input: input string
- * @dec_shift: number of decimal digits to shift
- * @v: output
- *
- * Parse a decimal floating point number in @input and store the result in
- * @v with decimal point right shifted @dec_shift times.  For example, if
- * @input is "12.3456" and @dec_shift is 3, *@v will be set to 12345.
- * Returns 0 on success, -errno otherwise.
- *
- * There's nothing cgroup specific about this function except that it's
- * currently the only user.
- */
-int cgroup_parse_float(const char *input, unsigned dec_shift, s64 *v)
-{
-	s64 whole, frac = 0;
-	int fstart = 0, fend = 0, flen;
-
-	if (!sscanf(input, "%lld.%n%lld%n", &whole, &fstart, &frac, &fend))
-		return -EINVAL;
-	if (frac < 0)
-		return -EINVAL;
-
-	flen = fend > fstart ? fend - fstart : 0;
-	if (flen < dec_shift)
-		frac *= power_of_ten(dec_shift - flen);
-	else
-		frac = DIV_ROUND_CLOSEST_ULL(frac, power_of_ten(flen - dec_shift));
-
-	*v = whole * power_of_ten(dec_shift) + frac;
-	return 0;
-}
-
 static int __init cgroup_wq_init(void)
 {
 	/*
@@ -5903,17 +5157,8 @@ static int __init cgroup_wq_init(void)
 	 * We would prefer to do this in cgroup_init() above, but that
 	 * is called before init_workqueues(): so leave this until after.
 	 */
-	cgroup_destroy_wq = create_workqueue("cgroup_destroy");
+	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
 	BUG_ON(!cgroup_destroy_wq);
-
-	/*
-	 * Used to destroy pidlists and separate to serve as flush domain.
-	 * Cap @max_active to 1 too.
-	 */
-	cgroup_pidlist_destroy_wq = alloc_workqueue("cgroup_pidlist_destroy",
-						    0, 1);
-	BUG_ON(!cgroup_pidlist_destroy_wq);
-
 	return 0;
 }
 core_initcall(cgroup_wq_init);
@@ -5995,42 +5240,6 @@ out_unlock:
 out:
 	return retval;
 }
-
-/* Display information about each subsystem and each hierarchy */
-static int proc_cgroupstats_show(struct seq_file *m, void *v)
-{
-	struct cgroup_subsys *ss;
-	int i;
-
-	seq_puts(m, "#subsys_name\thierarchy\tnum_cgroups\tenabled\n");
-	/*
-	 * ideally we don't want subsystems moving around while we do this.
-	 * cgroup_mutex is also necessary to guarantee an atomic snapshot of
-	 * subsys/hierarchy state.
-	 */
-	mutex_lock(&cgroup_mutex);
-
-	for_each_subsys(ss, i)
-		seq_printf(m, "%s\t%d\t%d\t%d\n",
-			   ss->legacy_name, ss->root->hierarchy_id,
-			   atomic_read(&ss->root->nr_cgrps),
-			   cgroup_ssid_enabled(i));
-
-	mutex_unlock(&cgroup_mutex);
-	return 0;
-}
-
-static int cgroupstats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, proc_cgroupstats_show, NULL);
-}
-
-static const struct file_operations proc_cgroupstats_operations = {
-	.open = cgroupstats_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
 
 /**
  * cgroup_fork - initialize cgroup related fields during copy_process()
@@ -6179,21 +5388,18 @@ void cgroup_exit(struct task_struct *tsk)
 	int i;
 
 	/*
-	 * Avoid potential race with the migrate path.
-	 */
-	spin_lock_irq(&css_set_lock);
-	/*
-	 * Unlink from @tsk from its css_set.
+	 * Unlink from @tsk from its css_set.  As migration path can't race
+	 * with us, we can check css_set and cg_list without synchronization.
 	 */
 	cset = task_css_set(tsk);
 
 	if (!list_empty(&tsk->cg_list)) {
+		spin_lock_irq(&css_set_lock);
 		css_set_move_task(tsk, cset, NULL, false);
+		spin_unlock_irq(&css_set_lock);
 	} else {
 		get_css_set(cset);
 	}
-
-	spin_unlock_irq(&css_set_lock);
 
 	/* see cgroup_post_fork() for details */
 	do_each_subsys_mask(ss, i, have_exit_callback) {
@@ -6212,76 +5418,6 @@ void cgroup_free(struct task_struct *task)
 	} while_each_subsys_mask();
 
 	put_css_set(cset);
-}
-
-static void check_for_release(struct cgroup *cgrp)
-{
-	if (notify_on_release(cgrp) && !cgroup_is_populated(cgrp) &&
-	    !css_has_online_children(&cgrp->self) && !cgroup_is_dead(cgrp))
-		schedule_work(&cgrp->release_agent_work);
-}
-
-/*
- * Notify userspace when a cgroup is released, by running the
- * configured release agent with the name of the cgroup (path
- * relative to the root of cgroup file system) as the argument.
- *
- * Most likely, this user command will try to rmdir this cgroup.
- *
- * This races with the possibility that some other task will be
- * attached to this cgroup before it is removed, or that some other
- * user task will 'mkdir' a child cgroup of this cgroup.  That's ok.
- * The presumed 'rmdir' will fail quietly if this cgroup is no longer
- * unused, and this cgroup will be reprieved from its death sentence,
- * to continue to serve a useful existence.  Next time it's released,
- * we will get notified again, if it still has 'notify_on_release' set.
- *
- * The final arg to call_usermodehelper() is UMH_WAIT_EXEC, which
- * means only wait until the task is successfully execve()'d.  The
- * separate release agent task is forked by call_usermodehelper(),
- * then control in this thread returns here, without waiting for the
- * release agent task.  We don't bother to wait because the caller of
- * this routine has no use for the exit status of the release agent
- * task, so no sense holding our caller up for that.
- */
-static void cgroup_release_agent(struct work_struct *work)
-{
-	struct cgroup *cgrp =
-		container_of(work, struct cgroup, release_agent_work);
-	char *pathbuf = NULL, *agentbuf = NULL;
-	char *argv[3], *envp[3];
-	int ret;
-
-	mutex_lock(&cgroup_mutex);
-
-	pathbuf = kmalloc(PATH_MAX, GFP_KERNEL);
-	agentbuf = kstrdup(cgrp->root->release_agent_path, GFP_KERNEL);
-	if (!pathbuf || !agentbuf)
-		goto out;
-
-	spin_lock_irq(&css_set_lock);
-	ret = cgroup_path_ns_locked(cgrp, pathbuf, PATH_MAX, &init_cgroup_ns);
-	spin_unlock_irq(&css_set_lock);
-	if (ret < 0 || ret >= PATH_MAX)
-		goto out;
-
-	argv[0] = agentbuf;
-	argv[1] = pathbuf;
-	argv[2] = NULL;
-
-	/* minimal command environment */
-	envp[0] = "HOME=/";
-	envp[1] = "PATH=/sbin:/bin:/usr/sbin:/usr/bin";
-	envp[2] = NULL;
-
-	mutex_unlock(&cgroup_mutex);
-	call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
-	goto out_free;
-out:
-	mutex_unlock(&cgroup_mutex);
-out_free:
-	kfree(agentbuf);
-	kfree(pathbuf);
 }
 
 static int __init cgroup_disable(char *str)
@@ -6304,33 +5440,6 @@ static int __init cgroup_disable(char *str)
 	return 1;
 }
 __setup("cgroup_disable=", cgroup_disable);
-
-static int __init cgroup_no_v1(char *str)
-{
-	struct cgroup_subsys *ss;
-	char *token;
-	int i;
-
-	while ((token = strsep(&str, ",")) != NULL) {
-		if (!*token)
-			continue;
-
-		if (!strcmp(token, "all")) {
-			cgroup_no_v1_mask = U16_MAX;
-			break;
-		}
-
-		for_each_subsys(ss, i) {
-			if (strcmp(token, ss->name) &&
-			    strcmp(token, ss->legacy_name))
-				continue;
-
-			cgroup_no_v1_mask |= 1 << i;
-		}
-	}
-	return 1;
-}
-__setup("cgroup_no_v1=", cgroup_no_v1);
 
 /**
  * css_tryget_online_from_dir - get corresponding css from a cgroup dentry
@@ -6533,6 +5642,16 @@ void cgroup_sk_free(struct sock_cgroup_data *skcd)
 
 /* cgroup namespaces */
 
+static struct ucounts *inc_cgroup_namespaces(struct user_namespace *ns)
+{
+	return inc_ucount(ns, current_euid(), UCOUNT_CGROUP_NAMESPACES);
+}
+
+static void dec_cgroup_namespaces(struct ucounts *ucounts)
+{
+	dec_ucount(ucounts, UCOUNT_CGROUP_NAMESPACES);
+}
+
 static struct cgroup_namespace *alloc_cgroup_ns(void)
 {
 	struct cgroup_namespace *new_ns;
@@ -6554,6 +5673,7 @@ static struct cgroup_namespace *alloc_cgroup_ns(void)
 void free_cgroup_ns(struct cgroup_namespace *ns)
 {
 	put_css_set(ns->root_cset);
+	dec_cgroup_namespaces(ns->ucounts);
 	put_user_ns(ns->user_ns);
 	ns_free_inum(&ns->ns);
 	kfree(ns);
@@ -6565,6 +5685,7 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 					struct cgroup_namespace *old_ns)
 {
 	struct cgroup_namespace *new_ns;
+	struct ucounts *ucounts;
 	struct css_set *cset;
 
 	BUG_ON(!old_ns);
@@ -6578,6 +5699,10 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 	if (!ns_capable(user_ns, CAP_SYS_ADMIN))
 		return ERR_PTR(-EPERM);
 
+	ucounts = inc_cgroup_namespaces(user_ns);
+	if (!ucounts)
+		return ERR_PTR(-ENOSPC);
+
 	/* It is not safe to take cgroup_mutex here */
 	spin_lock_irq(&css_set_lock);
 	cset = task_css_set(current);
@@ -6587,10 +5712,12 @@ struct cgroup_namespace *copy_cgroup_ns(unsigned long flags,
 	new_ns = alloc_cgroup_ns();
 	if (IS_ERR(new_ns)) {
 		put_css_set(cset);
+		dec_cgroup_namespaces(ucounts);
 		return new_ns;
 	}
 
 	new_ns->user_ns = get_user_ns(user_ns);
+	new_ns->ucounts = ucounts;
 	new_ns->root_cset = cset;
 
 	return new_ns;
@@ -6684,148 +5811,44 @@ int cgroup_bpf_detach(struct cgroup *cgrp, struct bpf_prog *prog,
 }
 #endif /* CONFIG_CGROUP_BPF */
 
-#ifdef CONFIG_CGROUP_DEBUG
-static struct cgroup_subsys_state *
-debug_css_alloc(struct cgroup_subsys_state *parent_css)
+static u64 power_of_ten(int power)
 {
-	struct cgroup_subsys_state *css = kzalloc(sizeof(*css), GFP_KERNEL);
-
-	if (!css)
-		return ERR_PTR(-ENOMEM);
-
-	return css;
+	u64 v = 1;
+	while (power--)
+		v *= 10;
+	return v;
 }
 
-static void debug_css_free(struct cgroup_subsys_state *css)
+/**
+ * cgroup_parse_float - parse a floating number
+ * @input: input string
+ * @dec_shift: number of decimal digits to shift
+ * @v: output
+ *
+ * Parse a decimal floating point number in @input and store the result in
+ * @v with decimal point right shifted @dec_shift times.  For example, if
+ * @input is "12.3456" and @dec_shift is 3, *@v will be set to 12345.
+ * Returns 0 on success, -errno otherwise.
+ *
+ * There's nothing cgroup specific about this function except that it's
+ * currently the only user.
+ */
+int cgroup_parse_float(const char *input, unsigned dec_shift, s64 *v)
 {
-	kfree(css);
-}
+	s64 whole, frac = 0;
+	int fstart = 0, fend = 0, flen;
 
-static u64 debug_taskcount_read(struct cgroup_subsys_state *css,
-				struct cftype *cft)
-{
-	return cgroup_task_count(css->cgroup);
-}
+	if (!sscanf(input, "%lld.%n%lld%n", &whole, &fstart, &frac, &fend))
+		return -EINVAL;
+	if (frac < 0)
+		return -EINVAL;
 
-static u64 current_css_set_read(struct cgroup_subsys_state *css,
-				struct cftype *cft)
-{
-	return (u64)(unsigned long)current->cgroups;
-}
+	flen = fend > fstart ? fend - fstart : 0;
+	if (flen < dec_shift)
+		frac *= power_of_ten(dec_shift - flen);
+	else
+		frac = DIV_ROUND_CLOSEST_ULL(frac, power_of_ten(flen - dec_shift));
 
-static u64 current_css_set_refcount_read(struct cgroup_subsys_state *css,
-					 struct cftype *cft)
-{
-	u64 count;
-
-	rcu_read_lock();
-	count = atomic_read(&task_css_set(current)->refcount);
-	rcu_read_unlock();
-	return count;
-}
-
-static int current_css_set_cg_links_read(struct seq_file *seq, void *v)
-{
-	struct cgrp_cset_link *link;
-	struct css_set *cset;
-	char *name_buf;
-
-	name_buf = kmalloc(NAME_MAX + 1, GFP_KERNEL);
-	if (!name_buf)
-		return -ENOMEM;
-
-	spin_lock_irq(&css_set_lock);
-	rcu_read_lock();
-	cset = rcu_dereference(current->cgroups);
-	list_for_each_entry(link, &cset->cgrp_links, cgrp_link) {
-		struct cgroup *c = link->cgrp;
-
-		cgroup_name(c, name_buf, NAME_MAX + 1);
-		seq_printf(seq, "Root %d group %s\n",
-			   c->root->hierarchy_id, name_buf);
-	}
-	rcu_read_unlock();
-	spin_unlock_irq(&css_set_lock);
-	kfree(name_buf);
+	*v = whole * power_of_ten(dec_shift) + frac;
 	return 0;
 }
-
-#define MAX_TASKS_SHOWN_PER_CSS 25
-static int cgroup_css_links_read(struct seq_file *seq, void *v)
-{
-	struct cgroup_subsys_state *css = seq_css(seq);
-	struct cgrp_cset_link *link;
-
-	spin_lock_irq(&css_set_lock);
-	list_for_each_entry(link, &css->cgroup->cset_links, cset_link) {
-		struct css_set *cset = link->cset;
-		struct task_struct *task;
-		int count = 0;
-
-		seq_printf(seq, "css_set %pK\n", cset);
-
-		list_for_each_entry(task, &cset->tasks, cg_list) {
-			if (count++ > MAX_TASKS_SHOWN_PER_CSS)
-				goto overflow;
-			seq_printf(seq, "  task %d\n", task_pid_vnr(task));
-		}
-
-		list_for_each_entry(task, &cset->mg_tasks, cg_list) {
-			if (count++ > MAX_TASKS_SHOWN_PER_CSS)
-				goto overflow;
-			seq_printf(seq, "  task %d\n", task_pid_vnr(task));
-		}
-		continue;
-	overflow:
-		seq_puts(seq, "  ...\n");
-	}
-	spin_unlock_irq(&css_set_lock);
-	return 0;
-}
-
-static u64 releasable_read(struct cgroup_subsys_state *css, struct cftype *cft)
-{
-	return (!cgroup_is_populated(css->cgroup) &&
-		!css_has_online_children(&css->cgroup->self));
-}
-
-static struct cftype debug_files[] =  {
-	{
-		.name = "taskcount",
-		.read_u64 = debug_taskcount_read,
-	},
-
-	{
-		.name = "current_css_set",
-		.read_u64 = current_css_set_read,
-	},
-
-	{
-		.name = "current_css_set_refcount",
-		.read_u64 = current_css_set_refcount_read,
-	},
-
-	{
-		.name = "current_css_set_cg_links",
-		.seq_show = current_css_set_cg_links_read,
-	},
-
-	{
-		.name = "cgroup_css_links",
-		.seq_show = cgroup_css_links_read,
-	},
-
-	{
-		.name = "releasable",
-		.read_u64 = releasable_read,
-	},
-
-	{ }	/* terminate */
-};
-
-struct cgroup_subsys debug_cgrp_subsys = {
-	.css_alloc = debug_css_alloc,
-	.css_free = debug_css_free,
-	.legacy_cftypes = debug_files,
-};
-#endif /* CONFIG_CGROUP_DEBUG */
