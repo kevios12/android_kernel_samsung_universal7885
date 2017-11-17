@@ -1742,7 +1742,7 @@ static void compact_node(int nid)
 	struct compact_control cc = {
 		.order = -1,
 		.mode = MIGRATE_SYNC_LIGHT,
-		.ignore_skip_hint = true,
+		.ignore_skip_hint = false,
 	};
 
 	__compact_pgdat(NODE_DATA(nid), &cc);
