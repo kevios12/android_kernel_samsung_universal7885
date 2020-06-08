@@ -926,7 +926,6 @@ static noinline int cow_file_range(struct inode *inode,
 	u64 alloc_hint = 0;
 	u64 num_bytes;
 	unsigned long ram_size;
-	u64 disk_num_bytes;
 	u64 cur_alloc_size;
 	u64 blocksize = root->sectorsize;
 	struct btrfs_key ins;
@@ -980,7 +979,7 @@ static noinline int cow_file_range(struct inode *inode,
 
 		cur_alloc_size = disk_num_bytes;
 		ret = btrfs_reserve_extent(root, cur_alloc_size,
-					   root->sectorsize, 0, alloc_hint,
+					   min_alloc_size, 0, alloc_hint,
 					   &ins, 1, 1);
 		if (ret < 0)
 			goto out_unlock;
