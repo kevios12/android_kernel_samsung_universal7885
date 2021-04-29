@@ -1807,7 +1807,7 @@ void decon_reg_configure_lcd(u32 id, struct decon_param *p)
 		if (dsi_mode == DSI_MODE_DUAL_DSI)
 			d_path = DPATH_NOCOMP_SPLITTER_FF0FF1_FORMATTER01_DSIMIF01;
 		else if (id == 2)
-			d_path = DECON2_NOCOMP_FF0_FORMATTER0_DISPIF;
+			d_path = (enum decon_data_path) DECON2_NOCOMP_FF0_FORMATTER0_DISPIF;
 		else
 			d_path = DPATH_NOCOMP_FF0_FORMATTER0_DSIMIF0;
 		decon_reg_set_data_path(id, d_path, e_path);
@@ -2430,12 +2430,12 @@ u32 decon_reg_get_height(u32 id, int dsi_mode)
 	return (FORMATTER_HEIGHT_GET(val));
 }
 
-const unsigned long decon_clocks_table[][CLK_ID_MAX] = {
+const double decon_clocks_table[][CLK_ID_MAX] = {
 	/* VCLK,  ECLK,  ACLK,  PCLK,  DISP_PLL,  resolution,            MIC_ratio, DSC count */
 	{    71,   168,   400,    66,        71, 1080 * 1920,     MIC_COMP_BYPASS,         0},
 	{    63,   168,   400,    66,        63, 1440 * 2560,  MIC_COMP_RATIO_1_2,         0},
-	{  41.7, 137.5,   400,    66,      62.5, 1440 * 2560,  MIC_COMP_RATIO_1_3,         0},
-	{   141, 137.5,   400,    66,       141, 1440 * 2560,     MIC_COMP_BYPASS,         0},
+	{    41,   137,   400,    66,        62, 1440 * 2560,  MIC_COMP_RATIO_1_3,         0},
+	{   141,   137,   400,    66,       141, 1440 * 2560,     MIC_COMP_BYPASS,         0},
 	{    42,   337,   400,    66,        42, 1440 * 2560,     MIC_COMP_BYPASS,         1},
 	{    42,   168,   400,    66,        42, 1440 * 2560,     MIC_COMP_BYPASS,         2},
 };

@@ -12,7 +12,7 @@
  */
 
 #ifndef _TZISR_H_
-#define _TZIRS_H_
+#define _TZISR_H_
 
 #include "tzdev.h"
 #include "tzirs_ioctl.h"
