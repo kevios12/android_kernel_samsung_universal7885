@@ -1860,6 +1860,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	num_of_window = decon_get_active_win_count(decon, win_data);
 	if (num_of_window) {
+            devfreq_boost_frame_kick(DEVFREQ_EXYNOS_MIF);
 		win_data->fence = decon_create_fence(decon, &fence, regs);
 		if (win_data->fence < 0)
 			goto err_prepare;
@@ -1876,6 +1877,7 @@ static int decon_set_win_config(struct decon_device *decon,
 
 	if (win_data->fence >= 0) {
 #if defined(CONFIG_DPU_20)
+		devfreq_boost_frame_kick(DEVFREQ_EXYNOS_MIF);
 		decon_create_release_fences(decon, win_data, fence);
 #endif
 	}
