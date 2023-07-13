@@ -132,6 +132,10 @@ struct cpufreq_interactive_tunables {
 #define DEFAULT_WD_BOUNDARY 1600
 	u32 wd_boundary;
 #endif
+	/* Minimal frequency selected */
+	unsigned int freq_min;
+	/* Maximal frequency selected */
+	unsigned int freq_max;
 };
 
 /*
@@ -500,6 +504,22 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * allow the speed to drop as soon as the boostpulse duration expires
 	 * (or the indefinite boost is turned off).
 	 */
+
+	/*
+	 * Set an upper limit for the frequency. Used to replace
+	 * "scaling_max_freq" because the kernel does alter the value
+	 * somewhere the whole time so we can't probably set it.
+	 */
+	if (new_freq > tunables->freq_max)
+		new_freq = tunables->freq_max;
+
+	/*
+	 * Set a lower limit for the frequency. Used to replace
+	 * "scaling_min_freq" because the kernel does alter the value
+	 * somewhere the whole time so we can't probably set it.
+	 */
+	if (new_freq < tunables->freq_min)
+		new_freq = tunables->freq_min;
 
 	if (!tunables->boosted || new_freq > tunables->hispeed_freq) {
 		pcpu->floor_freq = new_freq;
@@ -1102,6 +1122,44 @@ static ssize_t store_io_is_busy(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
+static ssize_t show_freq_min(struct cpufreq_interactive_tunables *tunables,
+		char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->freq_min);
+}
+
+static ssize_t store_freq_min(struct cpufreq_interactive_tunables *tunables,
+		const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->freq_min = val;
+	return count;
+}
+
+static ssize_t show_freq_max(struct cpufreq_interactive_tunables *tunables,
+		char *buf)
+{
+	return sprintf(buf, "%u\n", tunables->freq_max);
+}
+
+static ssize_t store_freq_max(struct cpufreq_interactive_tunables *tunables,
+		const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	tunables->freq_max = val;
+	return count;
+}
+
 /*
  * Create show/store routines
  * - sys: One governor instance for complete SYSTEM
@@ -1152,6 +1210,8 @@ show_store_gov_pol_sys(io_is_busy);
 #ifdef CONFIG_EXYNOS_WD_DVFS
 show_store_gov_pol_sys(wd_boundary);
 #endif
+show_store_gov_pol_sys(freq_min);
+show_store_gov_pol_sys(freq_max);
 
 #define gov_sys_attr_rw(_name)						\
 static struct kobj_attribute _name##_gov_sys =				\
@@ -1179,6 +1239,8 @@ gov_sys_pol_attr_rw(io_is_busy);
 gov_sys_pol_attr_rw(wd_boundary);
 #endif
 
+gov_sys_pol_attr_rw(freq_min);
+gov_sys_pol_attr_rw(freq_max);
 static struct kobj_attribute boostpulse_gov_sys =
 	__ATTR(boostpulse, 0200, NULL, store_boostpulse_gov_sys);
 
@@ -1201,6 +1263,8 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 #ifdef CONFIG_EXYNOS_WD_DVFS
 	&wd_boundary_gov_sys.attr,
 #endif
+	&freq_min_gov_sys.attr,
+	&freq_max_gov_sys.attr,
 	NULL,
 };
 
@@ -1225,6 +1289,8 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 #ifdef CONFIG_EXYNOS_WD_DVFS
 	&wd_boundary_gov_pol.attr,
 #endif
+	&freq_min_gov_pol.attr,
+	&freq_max_gov_pol.attr,
 	NULL,
 };
 
@@ -1342,6 +1408,8 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 
 		/* update handle for get cpufreq_policy */
 		tunables->policy = &policy->policy;
+		tunables->freq_min = policy->min;
+		tunables->freq_max = policy->max;
 
 		spin_lock_init(&tunables->target_loads_lock);
 		spin_lock_init(&tunables->above_hispeed_delay_lock);
