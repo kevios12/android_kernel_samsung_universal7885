@@ -1465,9 +1465,6 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		if (!tunables->hispeed_freq)
 			tunables->hispeed_freq = policy->max;
 
-		if (!tunables->freq_max)
-			tunables->freq_max = policy->max;
-
 		if (!tunables->freq_min)
 			tunables->freq_min = policy->min;
 
