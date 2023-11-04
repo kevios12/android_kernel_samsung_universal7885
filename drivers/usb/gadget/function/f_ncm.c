@@ -27,7 +27,6 @@
 #include "u_ether.h"
 #include "u_ether_configfs.h"
 #include "u_ncm.h"
-#include "configfs.h"
 
 /*
  * This function is a "CDC Network Control Model" (CDC NCM) Ethernet link.
@@ -1423,16 +1422,6 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 		return -EINVAL;
 
 	ncm_opts = container_of(f->fi, struct f_ncm_opts, func_inst);
-
-	if (cdev->use_os_string) {
-		f->os_desc_table = kzalloc(sizeof(*f->os_desc_table),
-					   GFP_KERNEL);
-		if (!f->os_desc_table)
-			return -ENOMEM;
-		f->os_desc_n = 1;
-		f->os_desc_table[0].os_desc = &ncm_opts->ncm_os_desc;
-	}
-
 	/*
 	 * in drivers/usb/gadget/configfs.c:configfs_composite_bind()
 	 * configurations are bound in sequence with list_for_each_entry,
@@ -1442,7 +1431,7 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 	 */
 	if (!ncm_opts->bound) {
 		mutex_lock(&ncm_opts->lock);
-		
+
 		ncm_opts->net = gether_setup_name_default("ncm");
 		if (IS_ERR(ncm_opts->net)) {
 			status = PTR_ERR(ncm_opts->net);
@@ -1457,7 +1446,7 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 		mutex_unlock(&ncm_opts->lock);
 		if (status) {
 			free_netdev(ncm_opts->net);
-			goto fail;
+			return status;
 		}
 		ncm_opts->bound = true;
 	}
@@ -1472,13 +1461,11 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 		status = -EINVAL;
 		goto netdev_cleanup;
 	}
-	
+
 	us = usb_gstrings_attach(cdev, ncm_strings,
 				 ARRAY_SIZE(ncm_string_defs));
-	if (IS_ERR(us)) {
-		status = PTR_ERR(us);
-		goto fail;
-	}
+	if (IS_ERR(us))
+		return PTR_ERR(us);
 	ncm_control_intf.iInterface = us[STRING_CTRL_IDX].id;
 	ncm_data_nop_intf.iInterface = us[STRING_DATA_IDX].id;
 	ncm_data_intf.iInterface = us[STRING_DATA_IDX].id;
@@ -1494,10 +1481,6 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 
 	ncm_control_intf.bInterfaceNumber = status;
 	ncm_union_desc.bMasterInterface0 = status;
-
-	if (cdev->use_os_string)
-		f->os_desc_table[0].if_id =
-			ncm_iad_desc.bFirstInterface;
 
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -1584,10 +1567,6 @@ ncm_bind(struct usb_configuration *c, struct usb_function *f)
 
 fail:
 	usb_free_all_descriptors(f);
-
-	kfree(f->os_desc_table);
-	f->os_desc_n = 0;
-
 	if (ncm->notify_req) {
 		kfree(ncm->notify_req->buf);
 		usb_ep_free_request(ncm->notify, ncm->notify_req);
@@ -1808,7 +1787,7 @@ To prevent crash in case we are not bound.
 	else
 		free_netdev(opts->net);
 */
-	kfree(opts->ncm_interf_group);
+	kfree(opts);
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	ncm_function_cleanup();
 #endif
@@ -1817,15 +1796,10 @@ To prevent crash in case we are not bound.
 static struct usb_function_instance *ncm_alloc_inst(void)
 {
 	struct f_ncm_opts *opts;
-	struct usb_os_desc *descs[1];
-	char *names[1];
-	struct config_group *ncm_interf_group;
 
 	opts = kzalloc(sizeof(*opts), GFP_KERNEL);
 	if (!opts)
 		return ERR_PTR(-ENOMEM);
-	opts->ncm_os_desc.ext_compat_id = opts->ncm_ext_compat_id;
-
 	mutex_init(&opts->lock);
 	opts->func_inst.free_func_inst = ncm_free_inst;
 	config_group_init_type_name(&opts->func_inst.group, "", &ncm_func_type);
@@ -1859,9 +1833,6 @@ static void ncm_unbind(struct usb_configuration *c, struct usb_function *f)
 	opts->bound = false;
 #endif
 	DBG(c->cdev, "ncm unbind\n");
-
-	kfree(f->os_desc_table);
-	f->os_desc_n = 0;
 
 	ncm_string_defs[0].id = 0;
 	usb_free_all_descriptors(f);
