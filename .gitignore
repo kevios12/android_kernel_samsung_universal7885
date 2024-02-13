@@ -1,0 +1,4 @@
+toolchain
+out/*
+kernel_zip/*
+patches/*
