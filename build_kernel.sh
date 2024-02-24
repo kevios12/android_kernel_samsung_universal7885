@@ -1,68 +1,189 @@
 #!/bin/bash
 # Exports
 export KBUILD_BUILD_USER="Kevios12"
-export KBUILD_BUILD_HOST="ubuntu@kevios12"
+export KBUILD_BUILD_HOST="ubuntu"
 export PLATFORM_VERSION=11
 export ANDROID_MAJOR_VERSION=r
-export ARCH=arm64
-export O=out
 
 SRCTREE=$(pwd)
 declare -g ZIP_FILENAME
 
-# Telegram
+# Lets make the Terminal a bit more Colorful
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+TOOLCHAIN="$SRCTREE/toolchain/bin"
+LLVM_DIS_ARGS="llvm-dis AR=llvm-ar AS=llvm-as NM=llvm-nm LD=ld.lld OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip"
+TRIPLE="aarch64-linux-gnu-"
+CROSS="$SRCTREE/toolchain/bin/aarch64-linux-gnu-"
+CROSS_ARM32="$SRCTREE/toolchain/bin/arm-linux-gnueabi-"
+LD="$SRCTREE/toolchain/lib"
+
+# OS
+DISTRO=$(lsb_release -d | awk -F"\t" '{print $2}')
+GLIBC_VERSION=$(ldd --version | grep 'ldd (' | awk '{print $NF}')
+
+# Telegram (Please Configure it or Press on end: 2(No)"
 CHAT_ID=""
 BOT_TOKEN=""
-TELEGRAM_API="https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
+TELEGRAM_API="https://api.telegram.org/bot${BOT_TOKEN}"
 
-make_defconfig(){
+# We are starting with Toolchain check
+init() {
+	if [ -d "$TOOLCHAIN" ]; then
+		echo -e "${GREEN}Looks like you already have a Toolchain.${NC}"
+		echo -e "${YELLOW}Do you want to continue and start the Build?${NC}"
+		select choice in "Continue" "Exit"; do
+			case "$choice" in
+			"Continue")
+				make_defconfig
+				break
+				;;
+			"Exit")
+				echo -e "${RED}Exiting.${NC}"
+				exit
+				;;
+			*)
+				echo -e "${RED}Invalid option. Please select again.${NC}"
+				;;
+			esac
+		done
+	else
+		echo -e "${RED}No Toolchain found!${NC}"
+		echo ""
+		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}"
+		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}"
+		echo ""
+		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}"
+		echo ""
+		if [[ "$DISTRO" == "Ubuntu 23.10" ]]; then
+			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 23.10 [GLIBC2.38]${NC}"
+			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
+			echo -e "${YELLOW}Proton needs ${RED}Ubuntu 20.04 [GLIBC2.31]${NC}"
+		elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
+			echo -e "${YELLOW}Neutron needs ${RED}Ubuntu 23.10 [GLIBC2.38]${NC}"
+			echo -e "${YELLOW}➜ Vortex needs ${GREEN}Ubuntu 21.10 [GLIBC2.34]${NC}"
+			echo -e "${YELLOW}Proton needs ${RED}Ubuntu 20.04 [GLIBC2.31]${NC}"
+		elif [[ "$DISTRO" == "Ubuntu 20.04.6 LTS" ]]; then
+			echo -e "${YELLOW}Neutron needs ${RED}Ubuntu 23.10 [GLIBC2.38]${NC}"
+			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
+			echo -e "${YELLOW}➜ Proton needs ${GREEN}Ubuntu 20.04.6 LTS [GLIBC2.31]${NC}"
+		fi
+		echo ""
+		echo -e "${GREEN}Proceed to Download the Toolchain?${NC}"
+		select toolchain in "Yes" "Quit"; do
+			case $toolchain in
+			"Yes")
+				if [[ "$DISTRO" == "Ubuntu 23.10" ]]; then
+					echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}"
+					mkdir -p "$HOME/toolchains/neutron-clang"
+					cd "$HOME/toolchains/neutron-clang"
+					bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
+					cd "$SRCTREE"
+					cp -r "$HOME/toolchains/neutron-clang" toolchain
+					make_defconfig
+				elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
+					echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}"
+					git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
+					make_defconfig
+				elif [[ "$DISTRO" == "Ubuntu 20.04.6 LTS" ]]; then
+					echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}"
+					git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
+					make_defconfig
+				fi
+				;;
+			"Quit")
+				echo -e "${RED}Exiting ...${NC}"
+				exit
+				;;
+			*)
+				echo -e "${RED}Invalid option. Please select again.${NC}"
+				;;
+			esac
+		done
+	fi
+}
+
+make_defconfig() {
 	make O=out ARCH=arm64 exynos7885-a40_defconfig
 	build_kernel
 }
 
-build_kernel(){
-	make O=out ARCH=arm64 -j$(nproc --all)
+build_kernel() {
+	PATH=$TOOLCHAIN:$PATH \
+		make O=out -j$(nproc --all) \
+		ARCH=arm64 \
+		LLVM_DIS=$LLVM_DIS_ARGS \
+		LLVM=1 \
+		CC=clang \
+		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
+		CLANG_TRIPLE=$TRIPLE \
+		CROSS_COMPILE=$CROSS \
+		CROSS_COMPILE_ARM32=$CROSS_ARM32
 	upload
 }
 
-create_zip(){
-    cd $SRCTREE
-    # Extract version information from Makefile
-    VERSION=$(awk '/^VERSION/ {print $3}' Makefile)
-    PATCHLEVEL=$(awk '/^PATCHLEVEL/ {print $3}' Makefile)
-    SUBLEVEL=$(awk '/^SUBLEVEL/ {print $3}' Makefile)
-    COUNT="counter.txt"
-    # Check if the number file exists, if not, initialize it with 1
-    if [ ! -f "$COUNT" ]; then
-        echo "1" > "$COUNT"
-    fi
-    # Read the current number from the file and increment it
-    CURRENT_NUMBER=$(<"$COUNT")
-    NEXT_NUMBER=$((CURRENT_NUMBER + 1))
-    echo "$NEXT_NUMBER" > "$COUNT"
-    cd $SRCTREE/kernel_zip/anykernel/
-    sed -i "s/Kernel: .*$/Kernel: $VERSION.$PATCHLEVEL.$SUBLEVEL/g" "version"
-    sed -i "s/Build Date: .*/Build Date: $(date +'%Y-%m-%d %H:%M')/g" "version"
-    ZIP_FILENAME="Kernel_A40_${NEXT_NUMBER}_[$VERSION.$PATCHLEVEL.$SUBLEVEL].zip"
-    zip -r9 "$ZIP_FILENAME" "$@"
-    echo ""
-    echo "Zip file created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/anykernel/"
+create_zip() {
+	cd $SRCTREE
+	# Extract version information from Makefile
+	VERSION=$(awk '/^VERSION/ {print $3}' Makefile)
+	PATCHLEVEL=$(awk '/^PATCHLEVEL/ {print $3}' Makefile)
+	SUBLEVEL=$(awk '/^SUBLEVEL/ {print $3}' Makefile)
+	COUNT="counter.txt"
+	# Check if the number file exists, if not, initialize it with 1
+	if [ ! -f "$COUNT" ]; then
+		echo "1" >"$COUNT"
+	fi
+	# Read the current number from the file and increment it
+	CURRENT_NUMBER=$(<"$COUNT")
+	NEXT_NUMBER=$((CURRENT_NUMBER + 1))
+	echo "$NEXT_NUMBER" >"$COUNT"
+	cd $SRCTREE/kernel_zip/anykernel/
+	if ! grep -q "# Auto-Generated by" "version"; then
+		sed -i '1i# Auto-Generated by '"$0"'!' "version"
+	fi
+	sed -i "s/Kernel: .*$/Kernel: $VERSION.$PATCHLEVEL.$SUBLEVEL/g" "version"
+	sed -i "s/Build Date: .*/Build Date: $(date +'%Y-%m-%d %H:%M %Z')/g" "version"
+	ZIP_FILENAME="Kernel_A40_${NEXT_NUMBER}_[$VERSION.$PATCHLEVEL.$SUBLEVEL].zip"
+	zip -r9 "$ZIP_FILENAME" "$@"
+	echo ""
+	echo "Zip file created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/anykernel/"
 }
 
-pack(){
-    # create and pack ZIP
-    cp out/arch/arm64/boot/Image kernel_zip/anykernel/
-    cd $SRCTREE/kernel_zip/anykernel/
-    create_zip META-INF tools anykernel.sh Image version
-    cd $SRCTREE
+pack() {
+	# create and pack ZIP
+	cp out/arch/arm64/boot/Image kernel_zip/anykernel/
+	cd $SRCTREE/kernel_zip/anykernel/
+	create_zip META-INF tools anykernel.sh Image version
+	cd $SRCTREE
 }
 
-upload(){
-    pack
-    echo ""
-    echo "Uploading $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME to Telegram ..."
-    # Upload to Telegram
-    # curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" "${TELEGRAM_API}"
+upload() {
+	pack
+	tg_upload
 }
 
-make_defconfig
+tg_upload() {
+	select telegram in "Yes" "No"; do
+		case "$telegram" in
+		"Yes")
+			echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME to Telegram ... ${NC}"
+			file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
+			curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Uploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB"
+			curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
+			break
+			;;
+		"No")
+			echo "Telegram Upload skipped."
+			break
+			;;
+		*)
+			echo "Invalid option. Please select again."
+			;;
+		esac
+	done
+}
+
+init
