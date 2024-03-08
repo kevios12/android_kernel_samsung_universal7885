@@ -260,9 +260,9 @@ create_zip() {
 
 pack() {
 	# create and pack ZIP
-	cp out/arch/arm64/boot/Image kernel_zip/anykernel/
+	cp out/arch/arm64/boot/Image dtb.img dtbo.img kernel_zip/anykernel/
 	cd $SRCTREE/kernel_zip/anykernel/
-	create_zip META-INF tools anykernel.sh Image version
+	create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
 	cd $SRCTREE
 	clear
 	echo -e "${GREEN}Zip file created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/anykernel/${NC}\n"
@@ -292,9 +292,9 @@ auto() {
 	echo -e "${NC}"
 	clear
 	echo -e "${YELLOW}Creating ZIP ...${NC}\n"
-	cp out/arch/arm64/boot/Image kernel_zip/anykernel/
+	cp out/arch/arm64/boot/Image dtb.img dtbo.img kernel_zip/anykernel/
 	cd $SRCTREE/kernel_zip/anykernel/
-	create_zip META-INF tools anykernel.sh Image version
+	create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
 	cd $SRCTREE
 }
 
