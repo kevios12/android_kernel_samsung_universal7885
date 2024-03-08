@@ -114,9 +114,7 @@ KBUILD_DTBS	:= dtbs
 
 KBUILD_DTBO_IMG := dtbo.img
 
-ifeq ($(CONFIG_EXYNOS_DTBTOOL),y)
 KBUILD_DTBS	+= dtb.img
-endif
 
 all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 
@@ -151,10 +149,13 @@ dtb.img: prepare scripts dtbs
 Image-dtb Image.gz-dtb: vmlinux scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
+$(KBUILD_DTB_IMG): dtbs
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+
 $(KBUILD_DTBO_IMG): dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
-all: $(KBUILD_DTBO_IMG)
+all: $(KBUILD_DTBO_IMG) $(KBUILD_DTB_IMG)
 
 PHONY += vdso_install
 vdso_install:
