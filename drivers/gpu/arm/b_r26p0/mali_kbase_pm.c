@@ -399,7 +399,7 @@ void kbase_pm_apc_request(struct kbase_device *kbdev, u32 dur_usec)
 		kbdev->apc.pending = true;
 		mutex_unlock(&kbdev->apc.lock);
 
-		WARN_ONCE(!kthread_queue_work(&kbdev->apc.worker, &kbdev->apc.power_on_work),
+		WARN_ONCE(!queue_kthread_work(&kbdev->apc.worker, &kbdev->apc.power_on_work),
 			"APC power on queue blocked");
 		return;
 	}
@@ -421,7 +421,7 @@ static enum hrtimer_restart kbase_pm_apc_timer_callback(struct hrtimer *timer)
 	struct kbase_device *kbdev =
 			container_of(timer, struct kbase_device, apc.timer);
 
-	WARN_ONCE(!kthread_queue_work(&kbdev->apc.worker, &kbdev->apc.power_off_work),
+	WARN_ONCE(!queue_kthread_work(&kbdev->apc.worker, &kbdev->apc.power_off_work),
 		"APC power off queue blocked");
 
 	return HRTIMER_NORESTART;
@@ -429,7 +429,7 @@ static enum hrtimer_restart kbase_pm_apc_timer_callback(struct hrtimer *timer)
 
 int kbase_pm_apc_init(struct kbase_device *kbdev)
 {
-	kthread_init_worker(&kbdev->apc.worker);
+	init_kthread_worker(&kbdev->apc.worker);
 	kbdev->apc.thread = kbase_create_realtime_thread(kbdev,
 		kthread_worker_fn, &kbdev->apc.worker, "mali_apc_thread");
 	if (IS_ERR(kbdev->apc.thread))
@@ -439,8 +439,8 @@ int kbase_pm_apc_init(struct kbase_device *kbdev)
 	 * We initialize power off and power on work on init as they will each
 	 * only operate on one worker.
 	 */
-	kthread_init_work(&kbdev->apc.power_off_work, kbase_pm_apc_power_off_worker);
-	kthread_init_work(&kbdev->apc.power_on_work, kbase_pm_apc_power_on_worker);
+	init_kthread_work(&kbdev->apc.power_off_work, kbase_pm_apc_power_off_worker);
+	init_kthread_work(&kbdev->apc.power_on_work, kbase_pm_apc_power_on_worker);
 
 	hrtimer_init(&kbdev->apc.timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	kbdev->apc.timer.function = kbase_pm_apc_timer_callback;
@@ -453,6 +453,6 @@ int kbase_pm_apc_init(struct kbase_device *kbdev)
 void kbase_pm_apc_term(struct kbase_device *kbdev)
 {
 	hrtimer_cancel(&kbdev->apc.timer);
-	kthread_flush_worker(&kbdev->apc.worker);
+	flush_kthread_worker(&kbdev->apc.worker);
 	kthread_stop(kbdev->apc.thread);
 }
