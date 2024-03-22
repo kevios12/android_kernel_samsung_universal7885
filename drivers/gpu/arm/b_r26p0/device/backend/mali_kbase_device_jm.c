@@ -261,13 +261,13 @@ int kbase_device_init(struct kbase_device *kbdev)
 		}
 	}
 
-	kthread_init_worker(&kbdev->job_done_worker);
+	init_kthread_worker(&kbdev->job_done_worker);
 
 	err = kbase_pm_apc_init(kbdev);
 	if (err)
 		return err;
 
-	kthread_init_worker(&kbdev->event_worker);
+	init_kthread_worker(&kbdev->event_worker);
 	kbdev->event_worker_thread = kthread_run(kthread_worker_fn,
 		&kbdev->event_worker, "mali_event_thread");
 	if (IS_ERR(kbdev->event_worker_thread)) {
