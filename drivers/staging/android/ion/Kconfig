@@ -57,6 +57,12 @@ config ION_EXYNOS_STAT_LOG
 	help
 	  Say Y if you need to see some stats info via debugfs
 
+config ION_A40
+	bool "SYSTEM_HEAP Seperate"
+
+config ION_JACKPOT
+	bool "SYSTEM_HEAP Seperate"
+
 if ION_EXYNOS
 source drivers/staging/android/ion/exynos/Kconfig
 endif
