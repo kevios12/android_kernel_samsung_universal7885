@@ -1,0 +1,11 @@
+/dts-v1/;
+/ {
+    compatible = "dummy,example";
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    dummy-node {
+        compatible = "dummy,node";
+        dummy-property = <0x12345678>;
+    };
+};

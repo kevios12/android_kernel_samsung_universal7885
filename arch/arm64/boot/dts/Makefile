@@ -4,6 +4,9 @@ dtbo-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
 	exynos/dtbo/exynos7904-a40_eur_open_00.dtbo \
 	exynos/dtbo/exynos7904-a40_eur_open_01.dtbo
 
+dtbo-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
+	exynos/dtbo/exynos7885-jackpotlte_dummy.dtbo
+
 dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/dtb/exynos7885-jackpotlte_eur_open_03.dtb \
 	exynos/dtb/exynos7885-jackpotlte_eur_open_04.dtb \
