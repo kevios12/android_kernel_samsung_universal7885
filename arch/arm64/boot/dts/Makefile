@@ -24,5 +24,8 @@ dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/dtb/exynos7885-jackpotlte_kor_06.dtb \
 	exynos/dtb/exynos7885-jackpotlte_kor_07.dtb
 
+dtb-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
+	exynos/dtbo/exynos7885.dtb
+
 always         := $(dtb-y) $(dtbo-y)
 clean-files    := *.dtb *.dtbo

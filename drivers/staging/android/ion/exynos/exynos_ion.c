@@ -682,7 +682,7 @@ err:
 static int ion_system_heap_size_notifier(struct notifier_block *nb,
 					 unsigned long action, void *data)
 {
-	show_ion_system_heap_size((struct seq_file *)data);
+//	show_ion_system_heap_size((struct seq_file *)data);
 	return 0;
 }
 
@@ -693,7 +693,7 @@ static struct notifier_block ion_system_heap_nb = {
 static int ion_system_heap_pool_size_notifier(struct notifier_block *nb,
 					      unsigned long action, void *data)
 {
-	show_ion_system_heap_pool_size((struct seq_file *)data);
+//	show_ion_system_heap_pool_size((struct seq_file *)data);
 	return 0;
 }
 
