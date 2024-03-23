@@ -375,16 +375,6 @@ static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char
 	return ret;
 }
 
-static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	if (sysfs_streq("0", buf))
-		gpu_dvfs_on_off(false);
-	else if (sysfs_streq("1", buf))
-		gpu_dvfs_on_off(true);
-
-	return count;
-}
-
 static ssize_t show_governor(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	ssize_t ret = 0;
@@ -532,47 +522,6 @@ static ssize_t show_max_lock_dvfs(struct device *dev, struct device_attribute *a
 	return ret;
 }
 
-static ssize_t set_max_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	int ret, clock = 0;
-	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
-
-	// Kill it from now without interferring Game Launcher
-	return count;
-
-	if (!platform)
-		return -ENODEV;
-
-	if (sysfs_streq("0", buf)) {
-		platform->user_max_lock_input = 0;
-		gpu_dvfs_clock_lock(GPU_DVFS_MAX_UNLOCK, SYSFS_LOCK, 0);
-	} else {
-		ret = kstrtoint(buf, 0, &clock);
-		if (ret) {
-			GPU_LOG(DVFS_WARNING, DUMMY, 0u, 0u, "%s: invalid value\n", __func__);
-			return -ENOENT;
-		}
-
-		platform->user_max_lock_input = clock;
-
-		clock = gpu_dvfs_get_level_clock(clock);
-
-		ret = gpu_dvfs_get_level(clock);
-		if ((ret < gpu_dvfs_get_level(platform->gpu_max_clock)) || (ret > gpu_dvfs_get_level(platform->gpu_min_clock))) {
-			GPU_LOG(DVFS_WARNING, DUMMY, 0u, 0u, "%s: invalid clock value (%d)\n", __func__, clock);
-			return -ENOENT;
-		}
-
-		/*
-		if (clock == platform->gpu_max_clock)
-			gpu_dvfs_clock_lock(GPU_DVFS_MAX_UNLOCK, SYSFS_LOCK, 0);
-		else
-			gpu_dvfs_clock_lock(GPU_DVFS_MAX_LOCK, SYSFS_LOCK, clock);*/
-	}
-
-	return count;
-}
-
 static ssize_t show_min_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	ssize_t ret = 0;
@@ -603,49 +552,6 @@ static ssize_t show_min_lock_dvfs(struct device *dev, struct device_attribute *a
 	}
 
 	return ret;
-}
-
-static ssize_t set_min_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	int ret, clock = 0;
-	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
-
-	// Kill it from now without interferring Game Launcher
-	return count;
-
-	if (!platform)
-		return -ENODEV;
-
-	if (sysfs_streq("0", buf)) {
-		platform->user_min_lock_input = 0;
-		gpu_dvfs_clock_lock(GPU_DVFS_MIN_UNLOCK, SYSFS_LOCK, 0);
-	} else {
-		ret = kstrtoint(buf, 0, &clock);
-		if (ret) {
-			GPU_LOG(DVFS_WARNING, DUMMY, 0u, 0u, "%s: invalid value\n", __func__);
-			return -ENOENT;
-		}
-
-		platform->user_min_lock_input = clock;
-
-		clock = gpu_dvfs_get_level_clock(clock);
-
-		ret = gpu_dvfs_get_level(clock);
-		if ((ret < gpu_dvfs_get_level(platform->gpu_max_clock)) || (ret > gpu_dvfs_get_level(platform->gpu_min_clock))) {
-			GPU_LOG(DVFS_WARNING, DUMMY, 0u, 0u, "%s: invalid clock value (%d)\n", __func__, clock);
-			return -ENOENT;
-		}
-
-		if (clock > platform->gpu_max_clock_limit)
-			clock = platform->gpu_max_clock_limit;
-
-		if (clock == platform->gpu_min_clock)
-			gpu_dvfs_clock_lock(GPU_DVFS_MIN_UNLOCK, SYSFS_LOCK, 0);
-		else
-			gpu_dvfs_clock_lock(GPU_DVFS_MIN_LOCK, SYSFS_LOCK, clock);
-	}
-
-	return count;
 }
 
 static ssize_t show_down_staycount(struct device *dev, struct device_attribute *attr, char *buf)
