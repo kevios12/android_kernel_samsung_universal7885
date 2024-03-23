@@ -874,7 +874,7 @@ u32 kbase_backend_get_current_flush_id(struct kbase_device *kbdev)
 int kbase_job_slot_init(struct kbase_device *kbdev)
 {
 	kbdev->hwaccess.backend.reset_workq = alloc_workqueue(
-						"Mali reset workqueue", 0, 1);
+						"Mali reset workqueue", WQ_HIGHPRI, 1);
 	if (NULL == kbdev->hwaccess.backend.reset_workq)
 		return -EINVAL;
 
