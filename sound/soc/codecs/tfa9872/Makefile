@@ -30,6 +30,8 @@ ifdef TFA_WRITE_CAL_TO_FILE
 ccflags-y               += -DTFA_WRITE_CAL_TO_FILE
 endif
 
+ccflags-y		+= $(call cc-disable-warning, enum-conversion)
+
 # objs
 snd-soc-tfa98xx-objs    := tfa98xx.o
 snd-soc-tfa98xx-objs    += tfa_container.o
@@ -43,6 +45,7 @@ snd-soc-tfa98xx-objs    += tfa_log.o
 CFLAGS_tfa98xx.o       += $(TFA98XX_FLAGS)
 CFLAGS_tfa_container.o += $(TFA98XX_FLAGS)
 CFLAGS_tfa_dsp.o       += $(TFA98XX_FLAGS)
+CFLAGS_tfa_dsp.o       += -Wno-enum-conversion
 CFLAGS_tfa_init.o      += $(TFA98XX_FLAGS)
 CFLAGS_tfa_debug.o     += $(TFA98XX_FLAGS)
 CFLAGS_tfa_cal.o       += $(TFA98XX_FLAGS)
