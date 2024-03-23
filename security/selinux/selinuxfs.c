@@ -190,12 +190,19 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 		length = task_has_security(current, SECURITY__SETENFORCE);
 		if (length)
 			goto out;
+#ifdef CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE
+		selinux_enforcing = CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE;
+#else
+		selinux_enforcing = new_value;
+#endif
 		audit_log(current->audit_context, GFP_KERNEL, AUDIT_MAC_STATUS,
-			"enforcing=%d old_enforcing=%d auid=%u ses=%u",
-			new_value, selinux_enforcing,
+			"enforcing=%d old_enforcing=%d auid=%u ses=%u"
+#ifdef CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE
+			" setenforce_override"
+#endif
+			, new_value, selinux_enforcing,
 			from_kuid(&init_user_ns, audit_get_loginuid(current)),
 			audit_get_sessionid(current));
-		selinux_enforcing = new_value;
 		if (selinux_enforcing)
 			avc_ss_reset(0);
 		selnl_notify_setenforce(selinux_enforcing);
