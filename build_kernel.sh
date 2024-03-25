@@ -7,7 +7,6 @@ export PLATFORM_VERSION=11
 export ANDROID_MAJOR_VERSION=r
 
 SRCTREE=$(pwd)
-declare -g ZIP_FILENAME
 
 # Lets make the Terminal a bit more Colorful
 GREEN='\033[0;32m'
@@ -36,72 +35,8 @@ TELEGRAM_API="https://api.telegram.org/bot${BOT_TOKEN}"
 # Initialize
 init() {
 	clear
-	if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID"]; then
-		echo -e "${YELLOW}!!!Your BOT Token or Chat ID is Empty!!!${NC}\n"
-		sleep 3
-		clear
-		echo -e "${GREEN}Do u want to start the Auto Builder?${NC}\n"
-		echo -e "${RED}If u say Yes, Please configure Telegram!${NC}\n"
-		echo -e "${YELLOW}Warning: Everything will be Cleaned up inclusive Out/Toolchain Folder!${NC}\n"
-	else
-		clear
-		echo -e "${GREEN}Do u want to start the Auto Builder?${NC}\n"
-		echo -e "${RED}If u say Yes, Please configure Telegram!${NC}\n"
-		echo -e "${YELLOW}Warning: Everything will be Cleaned up inclusive Out/Toolchain Folder!${NC}\n"
-
-	fi
-	select auto in "Yes" "No" "Exit"; do
-		case "$auto" in
-		"Yes")
-			clear
-			rm -rf toolchain
-			rm -rf out && make clean && make mrproper
-			clear
-			if [[ "$DISTRO" == "Ubuntu 23.10" ]]; then
-				echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
-				mkdir -p "$HOME/toolchains/neutron-clang"
-				cd "$HOME/toolchains/neutron-clang"
-				bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
-				cd "$SRCTREE"
-				cp -r "$HOME/toolchains/neutron-clang" toolchain
-				clear
-			elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
-				echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
-				git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
-				clear
-			elif [[ "$DISTRO" == "Ubuntu 20.04.6 LTS" ]]; then
-				echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
-				git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
-				clear
-			fi
-			auto
-			echo -e "${GREEN}Uploading: $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME to Telegram ...${NC}\n"
-			file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
-			curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Auto Builder%0AUploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB%0ABuild Date: $(date +'%Y-%m-%d %H:%M %Z')"
-			curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
-			clear
-			echo -e "${GREEN}Done ... Exiting ...${NC}\n"
-			exit
-			;;
-		"No")
-			start
-			toolchain
-			break
-			;;
-		"Exit")
-			clear
-			echo -e "${RED}Telegram Upload skipped. Exiting ...${NC}\n"
-			exit
-			;;
-		*)
-			echo -e "${RED}Invalid option. Please select again.${NC}\n"
-			break
-			;;
-		esac
-	done
-}
-
-start() {
+	echo -e "${YELLOW}Warning: Your BOT Token or Chat ID is Empty!${NC}\n"
+	sleep 2
 	clear
 	echo -e "${GREEN}Do u want to make Clean Build?${NC}\n"
 	select clean in "Yes" "No" "Exit"; do
@@ -130,6 +65,7 @@ start() {
 
 # Let's do a Toolchain check
 toolchain() {
+	clear
 	if [ -d "$TOOLCHAIN" ]; then
 		clear
 		echo -e "${GREEN}Looks like you already have a Toolchain.${NC}\n"
@@ -138,7 +74,7 @@ toolchain() {
 			case "$choice" in
 			"Continue")
 				clear
-				make_defconfig
+				select_device
 				break
 				;;
 			"Exit")
@@ -182,17 +118,17 @@ toolchain() {
 					cd "$SRCTREE"
 					cp -r "$HOME/toolchains/neutron-clang" toolchain
 					clear
-					make_defconfig
+					select_device
 				elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
 					echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
 					git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
 					clear
-					make_defconfig
+					select_device
 				elif [[ "$DISTRO" == "Ubuntu 20.04.6 LTS" ]]; then
 					echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
 					git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
 					clear
-					make_defconfig
+					select_device
 				fi
 				;;
 			"Exit")
@@ -208,11 +144,36 @@ toolchain() {
 	fi
 }
 
-make_defconfig() {
-	echo -e "${BLUE}"
-	make O=out ARCH=arm64 exynos7885-a40_defconfig
-	echo -e "${NC}"
-	build_kernel
+select_device() {
+	echo -e "${GREEN}Please select your Device${NC}\n"
+	select devices in "Galaxy A40 (a40)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
+		case "$devices" in
+		"Galaxy A40 (a40)")
+			codename="a40"
+			echo -e "${BLUE}"
+			make O=out ARCH=arm64 exynos7885-${codename}_defconfig
+			echo -e "${NC}"
+			build_kernel
+			break
+			;;
+		"Galaxy A8 2018 (jackpotlte)")
+			codename="jackpotlte"
+			echo -e "${BLUE}"
+			make O=out ARCH=arm64 exynos7885-${codename}_defconfig
+			echo -e "${NC}"
+			build_kernel
+			break
+			;;
+		"Exit")
+			clear
+			echo -e "${RED}Exiting ...${NC}\n"
+			exit
+			;;
+		*)
+			echo -e "${RED}Invalid option. Please select again.${NC}\n"
+			;;
+		esac
+	done
 }
 
 build_kernel() {
@@ -229,7 +190,7 @@ build_kernel() {
 		CROSS_COMPILE_ARM32=$CROSS_ARM32
 	echo -e "${NC}"
 	clear
-	echo -e "${YELLOW}Creating ZIP ...${NC}\n"
+	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
 	pack
 }
 
@@ -239,28 +200,21 @@ create_zip() {
 	VERSION=$(awk '/^VERSION/ {print $3}' Makefile)
 	PATCHLEVEL=$(awk '/^PATCHLEVEL/ {print $3}' Makefile)
 	SUBLEVEL=$(awk '/^SUBLEVEL/ {print $3}' Makefile)
-	COUNT="counter.txt"
-	# Check if the number file exists, if not, initialize it with 1
-	if [ ! -f "$COUNT" ]; then
-		echo "1" >"$COUNT"
-	fi
-	# Read the current number from the file and increment it
-	CURRENT_NUMBER=$(<"$COUNT")
-	NEXT_NUMBER=$((CURRENT_NUMBER + 1))
-	echo "$NEXT_NUMBER" >"$COUNT"
 	cd $SRCTREE/kernel_zip/anykernel/
 	if ! grep -q "# Auto-Generated by" "version"; then
 		sed -i '1i# Auto-Generated by '"$0"'!' "version"
 	fi
 	sed -i "s/Kernel: .*$/Kernel: $VERSION.$PATCHLEVEL.$SUBLEVEL/g" "version"
 	sed -i "s/Build Date: .*/Build Date: $(date +'%Y-%m-%d %H:%M %Z')/g" "version"
-	ZIP_FILENAME="Kernel_A40_${NEXT_NUMBER}_[$VERSION.$PATCHLEVEL.$SUBLEVEL].zip"
+	ZIP_FILENAME="Nameless_${codename}_v1.zip"
 	zip -r9 "$ZIP_FILENAME" "$@"
 }
 
 pack() {
 	# create and pack ZIP
-	cp out/arch/arm64/boot/Image dtb.img dtbo.img kernel_zip/anykernel/
+	cp out/arch/arm64/boot/Image kernel_zip/anykernel
+	cp out/arch/arm64/boot/dtb.img kernel_zip/anykernel
+	cp out/arch/arm64/boot/dtbo.img kernel_zip/anykernel
 	cd $SRCTREE/kernel_zip/anykernel/
 	create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
 	cd $SRCTREE
@@ -272,30 +226,6 @@ pack() {
 	echo -e "***************************************************${NC}\n"
 	echo -e "${GREEN}Upload to Telegram?${NC}\n"
 	tg_upload
-}
-
-auto() {
-	echo -e "${BLUE}"
-	make O=out ARCH=arm64 exynos7885-a40_defconfig
-	echo -e "${NC}"
-	echo -e "${BLUE}"
-	PATH=$TOOLCHAIN:$PATH \
-		make O=out -j$(nproc --all) \
-		ARCH=arm64 \
-		LLVM_DIS=$LLVM_DIS_ARGS \
-		LLVM=1 \
-		CC=clang \
-		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
-		CLANG_TRIPLE=$TRIPLE \
-		CROSS_COMPILE=$CROSS \
-		CROSS_COMPILE_ARM32=$CROSS_ARM32
-	echo -e "${NC}"
-	clear
-	echo -e "${YELLOW}Creating ZIP ...${NC}\n"
-	cp out/arch/arm64/boot/Image dtb.img dtbo.img kernel_zip/anykernel/
-	cd $SRCTREE/kernel_zip/anykernel/
-	create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
-	cd $SRCTREE
 }
 
 tg_upload() {
@@ -323,4 +253,3 @@ tg_upload() {
 }
 
 init
-
