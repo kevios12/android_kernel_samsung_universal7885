@@ -209,36 +209,6 @@ static void cpufreq_interactive_timer_resched(unsigned long cpu)
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
 }
 
-/* The caller shall take enable_sem write semaphore to avoid any timer race.
- * The cpu_timer and cpu_slack_timer must be deactivated when calling this
- * function.
- */
-static void cpufreq_interactive_timer_start(
-	struct cpufreq_interactive_tunables *tunables, int cpu)
-{
-	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-	u64 expires = round_to_nw_start(pcpu->last_evaluated_jiffy, tunables);
-	unsigned long flags;
-
-	spin_lock_irqsave(&pcpu->load_lock, flags);
-	pcpu->cpu_timer.expires = expires;
-	add_timer_on(&pcpu->cpu_timer, cpu);
-	if (tunables->timer_slack_val >= 0 &&
-	    pcpu->target_freq > pcpu->policy->min) {
-		expires += usecs_to_jiffies(tunables->timer_slack_val);
-		pcpu->cpu_slack_timer.expires = expires;
-		add_timer_on(&pcpu->cpu_slack_timer, cpu);
-	}
-
-	pcpu->time_in_idle =
-		get_cpu_idle_time(cpu, &pcpu->time_in_idle_timestamp,
-				  tunables->io_is_busy);
-	pcpu->cputime_speedadj = 0;
-	pcpu->delta_idle = 0;
-	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
-	spin_unlock_irqrestore(&pcpu->load_lock, flags);
-}
-
 static unsigned int freq_to_above_hispeed_delay(
 	struct cpufreq_interactive_tunables *tunables,
 	unsigned int freq)
