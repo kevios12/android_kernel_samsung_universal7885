@@ -1160,13 +1160,13 @@ static void add_desc_to_perf_list(struct irq_desc *desc)
 
 static void affine_one_perf_thread(struct task_struct *t)
 {
-	t->flags |= PF_PERF_CRITICAL;
+	t->pc_flags |= PC_PERF_AFFINE;
 	set_cpus_allowed_ptr(t, cpu_perf_mask);
 }
 
 static void unaffine_one_perf_thread(struct task_struct *t)
 {
-	t->flags &= ~PF_PERF_CRITICAL;
+	t->pc_flags &= ~PC_PERF_AFFINE;
 	set_cpus_allowed_ptr(t, cpu_all_mask);
 }
 
