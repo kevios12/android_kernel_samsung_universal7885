@@ -545,6 +545,8 @@ struct s5p_mfc_dev {
 	int last_int;
 	struct timeval last_cmd_time;
 	struct timeval last_int_time;
+
+	int num_dec;
 };
 
 /**
