@@ -43,6 +43,7 @@
 #include "decon_notify.h"
 #include "../../../../staging/android/sw_sync.h"
 #include "dpp.h"
+#include <linux/devfreq_boost.h>
 
 #ifdef CONFIG_SAMSUNG_TUI
 #include "stui_inf.h"
