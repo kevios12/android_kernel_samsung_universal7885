@@ -216,7 +216,11 @@ pack() {
 	cp out/arch/arm64/boot/dtb.img kernel_zip/anykernel
 	cp out/arch/arm64/boot/dtbo.img kernel_zip/anykernel
 	cd $SRCTREE/kernel_zip/anykernel/
-	create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
+	if [ "$codename" = "a40" ]; then
+		create_zip META-INF tools anykernel.sh Image dtb.img dtbo.img version
+	elif [ "$codename" = "jackpotlte" ]; then
+		create_zip META-INF tools anykernel.sh Image dtb.img version
+	fi
 	cd $SRCTREE
 	clear
 	echo -e "${GREEN}Zip file created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/anykernel/${NC}\n"
