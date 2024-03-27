@@ -10619,6 +10619,7 @@ static struct i2c_driver bt532_ts_driver = {
 #ifdef CONFIG_PM
 		.pm = &bt532_ts_dev_pm_ops,
 #endif
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 
