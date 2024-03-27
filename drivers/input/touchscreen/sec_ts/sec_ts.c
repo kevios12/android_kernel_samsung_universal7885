@@ -3122,6 +3122,7 @@ static struct i2c_driver sec_ts_driver = {
 #ifdef CONFIG_PM
 		.pm = &sec_ts_dev_pm_ops,
 #endif
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 
