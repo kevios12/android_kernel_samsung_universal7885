@@ -10194,7 +10194,7 @@ static int bt532_ts_probe(struct i2c_client *client,
 	spin_lock_init(&info->lock);
 	INIT_WORK(&info->tmr_work, ts_tmr_work);
 	esd_tmr_workqueue =
-		create_singlethread_workqueue("esd_tmr_workqueue");
+		alloc_workqueue("esd_tmr_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 
 	if (!esd_tmr_workqueue) {
 		input_err(true, &client->dev, "Failed to create esd tmr work queue\n");
