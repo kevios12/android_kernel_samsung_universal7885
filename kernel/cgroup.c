@@ -63,6 +63,8 @@
 #include <linux/nsproxy.h>
 #include <linux/file.h>
 #include <net/sock.h>
+#include <linux/binfmts.h>
+#include <linux/cpu_input_boost.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cgroup.h>
@@ -3027,6 +3029,13 @@ static ssize_t __cgroup_procs_write(struct kernfs_open_file *of, char *buf,
 	    !strcmp(of->kn->parent->name, "top-app") &&
 	    is_zygote_pid(tsk->parent->pid)) {
 		devfreq_boost_kick_max(DEVFREQ_EXYNOS_MIF, 500);
+	}
+
+	/* This covers boosting for app launches and app transitions */
+	if (!ret && !threadgroup &&
+	    !strcmp(of->kn->parent->name, "top-app") &&
+	    is_zygote_pid(tsk->parent->pid)) {
+		cpu_input_boost_kick_max(500);
 	}
 
 	put_task_struct(tsk);
