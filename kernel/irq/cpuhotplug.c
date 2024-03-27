@@ -36,6 +36,9 @@ static bool migrate_one_irq(struct irq_desc *desc)
 		return false;
 	}
 
+	if (irqd_has_set(d, IRQD_PERF_CRITICAL))
+		return false;
+
 	c = irq_data_get_irq_chip(d);
 	if (!c->irq_set_affinity) {
 		pr_debug("IRQ%u: unable to set affinity\n", d->irq);
@@ -79,6 +82,8 @@ void irq_migrate_all_off_this_cpu(void)
 			pr_warn_ratelimited("IRQ%u no longer affine to CPU%u\n",
 					    irq, smp_processor_id());
 	}
+	if (!cpumask_test_cpu(smp_processor_id(), cpu_lp_mask))
+		reaffine_perf_irqs(true);
 
 	local_irq_restore(flags);
 }

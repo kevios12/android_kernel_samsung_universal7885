@@ -114,6 +114,8 @@ extern void irq_set_thread_affinity(struct irq_desc *desc);
 extern int irq_do_set_affinity(struct irq_data *data,
 			       const struct cpumask *dest, bool force);
 
+extern void setup_perf_irq_locked(struct irq_desc *desc, unsigned int perf_flag);
+
 /* Inline functions for support of irq chips on slow busses */
 static inline void chip_bus_lock(struct irq_desc *desc)
 {

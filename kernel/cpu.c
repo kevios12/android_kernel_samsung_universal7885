@@ -502,7 +502,9 @@ int cpu_down(unsigned int cpu)
 	struct cpumask newmask;
 	int err;
 
+	preempt_disable();
 	cpumask_andnot(&newmask, cpu_online_mask, cpumask_of(cpu));
+	preempt_enable();
 
 	/* One big cluster CPU and one little cluster CPU must remain online */
 	if (!cpumask_intersects(&newmask, cpu_perf_mask) ||
@@ -894,7 +896,7 @@ void enable_nonboot_cpus(void)
 	arch_enable_nonboot_cpus_end();
 
 	cpumask_clear(frozen_cpus);
-	reaffine_perf_irqs();
+	reaffine_perf_irqs(false);
 out:
 	cpu_maps_update_done();
 }
