@@ -4382,6 +4382,19 @@ static int abox_register_component(struct device *dev,
 	return 0;
 }
 
+#ifdef CONFIG_JACK_FIX
+static bool abox_is_calliope_incompatible(struct platform_device *pdev)
+{
+	struct abox_data *data = platform_get_drvdata(pdev);
+	ABOX_IPC_MSG msg;
+	struct IPC_SYSTEM_MSG *system_msg = &msg.msg.system;
+
+	memcpy(&msg, data->sram_base + 0x30040, 0x3C);
+
+	return ((system_msg->param3 >> 24) == 'A');
+}
+#endif
+
 static void abox_restore_output_rate(struct device *dev,
 		struct abox_data *data, enum ABOX_CONFIGMSG msg)
 {
@@ -4515,6 +4528,9 @@ static void abox_system_ipc_handler(struct device *dev,
 		struct abox_data *data, ABOX_IPC_MSG *msg)
 {
 	struct IPC_SYSTEM_MSG *system_msg = &msg->msg.system;
+#ifdef CONFIG_JACK_FIX
+	struct platform_device *pdev = to_platform_device(dev);
+#endif
 	struct abox_irq_action *irq_action;
 	int result;
 
@@ -4523,6 +4539,10 @@ static void abox_system_ipc_handler(struct device *dev,
 	switch (system_msg->msgtype) {
 	case ABOX_BOOT_DONE:
 		abox_boot_done(dev, system_msg->param3);
+#ifdef CONFIG_JACK_FIX
+		if (abox_is_calliope_incompatible(pdev))
+			dev_err(dev, "Calliope is not compatible with the driver\n");
+#endif
 
 		list_for_each_entry(irq_action, &data->irq_actions, list) {
 			if (irq_action->irq == IPC_SYSTEM) {
@@ -5430,13 +5450,19 @@ static int abox_disable(struct device *dev)
 
 	data->enabled = false;
 
+#ifndef CONFIG_JACK_FIX
 	abox_request_dram_on(data->pdev, dev, false);
+#endif
 
 	clk_disable(data->clk_ca7);
 
 	abox_gic_disable_irq(&data->pdev_gic->dev);
 
 	cancel_work_sync(&data->change_cpu_gear_work);
+
+#ifdef CONFIG_JACK_FIX
+	abox_request_dram_on(data->pdev, dev, false);
+#endif
 
 	abox_failsafe_report_reset(dev);
 

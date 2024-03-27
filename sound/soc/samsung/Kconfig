@@ -411,6 +411,14 @@ config SND_SOC_EAX_NONE_KMIXING
 	help
 	  Say Y if you want to add support for EAX slowpath on the Universal8890
 
+config JACK_FIX
+        bool "Headphone Jack fix"
+        default y
+        help
+          This fix is enabled by Default. It fixes sound codec compatibility
+          issue between 2 different firmwares(Q/R). AOSP Roms should have it 
+	  enabled. OneUI doesn't need it, so it should be No.
+
 # For support SEIREN audio
 source "sound/soc/samsung/seiren/Kconfig"
 source "sound/soc/samsung/abox/Kconfig"

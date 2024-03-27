@@ -1016,6 +1016,14 @@ config SND_SOC_TPA6130A2
 	tristate "Texas Instruments TPA6130A2 headphone amplifier"
 	depends on I2C
 
+config JACK_FIX
+        bool "Headphone Jack fix"
+        default y
+        help
+          This fix is enabled by Default. It fixes sound codec compatibility
+          issue between 2 different firmwares(Q/R). AOSP Roms should have it 
+          enabled. OneUI doesn't need it, so it should be No.
+
 #tas2562
 source "sound/soc/codecs/tas2562/Kconfig"
 
