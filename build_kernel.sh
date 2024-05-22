@@ -200,7 +200,8 @@ build_kernel() {
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
 		CROSS_COMPILE=$CROSS \
-		CROSS_COMPILE_ARM32=$CROSS_ARM32
+		CROSS_COMPILE_ARM32=$CROSS_ARM32 \
+		&> compilelog.txt
 	echo -e "${NC}"
 	clear
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
