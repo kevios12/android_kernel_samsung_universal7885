@@ -38,11 +38,13 @@
 #include <linux/battery_saver.h>
 #include <trace/events/power.h>
 
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 /* suspend max freq tunable */
 unsigned int cpu0_suspend_max_freq = 0;
 unsigned int cpu4_suspend_max_freq = 0;
 module_param(cpu0_suspend_max_freq, int, 0644);
 module_param(cpu4_suspend_max_freq, int, 0644);
+#endif
 
 static LIST_HEAD(cpufreq_policy_list);
 

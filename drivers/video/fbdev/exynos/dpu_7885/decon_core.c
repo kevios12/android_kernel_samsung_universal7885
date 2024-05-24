@@ -33,7 +33,9 @@
 #include <linux/powersuspend.h>
 #endif
 #include <linux/pinctrl/consumer.h>
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 #include <linux/cpufreq.h>
+#endif
 #include <video/mipi_display.h>
 #include <media/v4l2-subdev.h>
 #include <soc/samsung/exynos-powermode.h>
@@ -437,6 +439,7 @@ int decon_tui_protection(bool tui_en)
 	return ret;
 }
 
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 /* suspend_max_freq */
 extern unsigned int cpu0_suspend_max_freq;
 extern unsigned int cpu4_suspend_max_freq;
@@ -446,6 +449,7 @@ static unsigned int cpu4_set_suspend_max_freq = 0;
 
 static unsigned int cpu0_tmp_max_freq = 0;
 static unsigned int cpu4_tmp_max_freq = 0;
+#endif
 
 /* ---------- FB_BLANK INTERFACE ----------- */
 static int decon_enable(struct decon_device *decon)
@@ -454,9 +458,11 @@ static int decon_enable(struct decon_device *decon)
 	struct decon_param p;
 	int ret = 0;
 
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 	/* restore previous max cpu freq */
-	cpufreq_update_freq(0, 449000, cpu0_tmp_max_freq);
+	cpufreq_update_freq(0, 676000, cpu0_tmp_max_freq);
 	cpufreq_update_freq(4, 757000, cpu4_tmp_max_freq);
+#endif
 
 #if defined(CONFIG_EXYNOS_DOZE)
 	struct dsim_device *dsim = NULL;
@@ -584,6 +590,7 @@ static int decon_enable(struct decon_device *decon)
 		call_panel_ops(dsim, displayon, dsim);
 #endif
 
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 	/* save current max cpu freq */
 	cpu0_tmp_max_freq = policy0->max;
 
@@ -605,6 +612,7 @@ static int decon_enable(struct decon_device *decon)
 	}
 
 	cpufreq_update_freq(4, 757000, cpu4_set_suspend_max_freq);
+#endif
 
 err:
 	mutex_unlock(&decon->lock);
@@ -614,8 +622,10 @@ err:
 static int decon_disable(struct decon_device *decon)
 {
 	struct decon_mode_info psr;
+#ifdef CONFIG_CPU_FREQ_SUSPEND_LIMIT
 	struct cpufreq_policy *policy0 = cpufreq_cpu_get(0);
 	struct cpufreq_policy *policy4 = cpufreq_cpu_get(4);
+#endif
 	int ret = 0;
 	struct dsim_device *dsim = NULL;
 
