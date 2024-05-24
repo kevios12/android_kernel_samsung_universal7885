@@ -56,7 +56,7 @@
 #define DECON_DEBUG_SFR 0x14860400
 
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-extern void set_suspend_freqs(bool);
+extern void set_suspend_cpufreq(bool);
 #endif
 
 bool is_suspend = false;
@@ -767,12 +767,12 @@ blank_exit:
 	decon_info("%s - blank_mode: %d, %d\n", __func__, blank_mode, ret);
 
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-		set_suspend_freqs(false);
+		set_suspend_cpufreq(false);
 #endif
 	} else {
 		is_suspend = true;
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-		set_suspend_freqs(true);
+		set_suspend_cpufreq(true);
 #endif
 	}
 
