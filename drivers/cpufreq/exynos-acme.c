@@ -475,7 +475,7 @@ module_param(cpu4_max_freq, uint, 0644);
 
 static bool update_freqs = false;
 
-void set_suspend_cpufreq(bool is_suspend)
+void set_suspend_cpufreq(void)
 {
 	if (!enable_suspend_freqs)
 		return;

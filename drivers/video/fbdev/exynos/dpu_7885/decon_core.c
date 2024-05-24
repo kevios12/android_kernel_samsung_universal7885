@@ -60,9 +60,10 @@ extern void set_suspend_cpufreq(bool is_suspend);
 #endif
 
 #ifdef CONFIG_PM_DEVFREQ
-extern void set_devfreq_mif_pm_qos(bool is_suspend);
-extern void set_devfreq_disp_pm_qos(bool is_suspend);
-extern void set_devfreq_int_pm_qos(bool is_suspend);
+extern void set_devfreq_mif_pm_qos(void);
+extern void set_devfreq_disp_pm_qos(void);
+extern void set_devfreq_int_pm_qos(void);
+extern void set_gpu_policy(void);
 #endif
 
 bool is_suspend = false;
@@ -718,14 +719,14 @@ err:
 static void suspend_handler_thread(struct work_struct *suspend_handler_work)
 {
 #ifdef CONFIG_PM_DEVFREQ
-	set_devfreq_disp_pm_qos(is_suspend);
-	set_devfreq_mif_pm_qos(is_suspend);
-	set_devfreq_int_pm_qos(is_suspend);
+	set_devfreq_disp_pm_qos();
+	set_devfreq_mif_pm_qos();
+	set_devfreq_int_pm_qos();
 #endif
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-	set_suspend_cpufreq(is_suspend);
+	set_suspend_cpufreq();
 #endif
-	set_gpu_policy(is_suspend);
+	set_gpu_policy();
 }
 static DECLARE_WORK(suspend_handler_work, suspend_handler_thread);
 
