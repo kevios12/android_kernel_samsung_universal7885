@@ -24,6 +24,8 @@
 
 #include "exynos-acme.h"
 
+extern bool is_suspend;
+
 /*
  * list head of cpufreq domain
  */

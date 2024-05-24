@@ -56,7 +56,7 @@
 #define DECON_DEBUG_SFR 0x14860400
 
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-extern void set_suspend_cpufreq(bool is_suspend);
+extern void set_suspend_cpufreq(void);
 #endif
 
 #ifdef CONFIG_PM_DEVFREQ
