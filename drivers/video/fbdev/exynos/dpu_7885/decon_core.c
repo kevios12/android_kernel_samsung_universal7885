@@ -766,15 +766,19 @@ blank_exit:
 	decon_hiber_unblock(decon);
 	decon_info("%s - blank_mode: %d, %d\n", __func__, blank_mode, ret);
 
-#ifdef CONFIG_CPU_FREQ_SUSPEND
-		set_suspend_cpufreq(false);
-#endif
-	} else {
+	if (blank_mode == FB_BLANK_UNBLANK)
+		is_suspend = false;
+	else
 		is_suspend = true;
+
 #ifdef CONFIG_CPU_FREQ_SUSPEND
-		set_suspend_cpufreq(true);
+	set_suspend_cpufreq();
 #endif
-	}
+
+#ifdef CONFIG_PM_DEVFREQ
+	set_devfreq_mif_pm_qos();
+	set_devfreq_disp_pm_qos();
+#endif
 
 	return ret;
 }
