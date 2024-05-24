@@ -63,11 +63,11 @@ config CPU_FREQ_TIMES
 
          If in doubt, say N.
 
-config CPU_FREQ_SUSPEND_LIMIT
-	bool "Limit suspend cpu frequency"
+config CPU_FREQ_SUSPEND
+	bool "CPU frequency for suspend"
 	default y
 	help
-	  Adds a sysfs interface to limit CPU frequency on suspend.
+	  Adds a module interface to set CPU min/max frequency for suspend.
 
 	  If in doubt, say N.
 
