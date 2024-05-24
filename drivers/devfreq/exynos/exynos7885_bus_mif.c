@@ -38,11 +38,9 @@
 #include "../../soc/samsung/cal-if/acpm_dvfs.h"
 #include "exynos_ppmu.h"
 
-extern bool is_suspend;
-
 #define INT	0
 
-static struct exynos_devfreq_data *_data = NULL;
+static struct exynos_devfreq_data *exynos_data = NULL;
 
 #ifdef CONFIG_EXYNOS_DVFS_MANAGER
 static unsigned int ect_find_constraint_freq(struct ect_minlock_domain *ect_domain,
@@ -219,7 +217,7 @@ static int exynos7885_devfreq_mif_suspend(struct exynos_devfreq_data *data)
 	return 0;
 }
 
-void set_devfreq_mif_pm_qos(void)
+void set_devfreq_mif_pm_qos(bool is_suspend)
 {
 	if (_data == NULL) {
 		pr_err("%s: _data is NULL !!\n", __func__);
@@ -227,9 +225,9 @@ void set_devfreq_mif_pm_qos(void)
 	}
 
 	if (is_suspend)
-		exynos7885_devfreq_mif_suspend(_data);
+		exynos7885_devfreq_mif_suspend(exynos_data);
 	else
-		exynos7885_devfreq_mif_resume(_data);
+		exynos7885_devfreq_mif_resume(exynos_data);
 }
 #endif
 
@@ -322,7 +320,7 @@ static int exynos7885_devfreq_mif_init_freq_table(struct exynos_devfreq_data *da
 			dev_pm_opp_disable(data->dev, (unsigned long)data->opp_list[i].freq);
 	}
 
-	cur_freq = clk_get_rate(data->clk);
+	cur_freq = (u32)cal_dfs_get_rate(data->dfs_id);
 	dev_info(data->dev, "current frequency: %u Khz\n", cur_freq);
 
 	ret = exynos7885_mif_constraint_parse(data, min_freq, max_freq);
@@ -331,7 +329,7 @@ static int exynos7885_devfreq_mif_init_freq_table(struct exynos_devfreq_data *da
 		return -EINVAL;
 	}
 
-	cur_freq = clk_get_rate(data->dfs_id);
+	cur_freq = (u32)cal_dfs_get_rate(data->dfs_id);
 	dev_info(data->dev, "current frequency after setup: %u Khz\n", cur_freq);
 
 	ret = exynos_acpm_set_init_freq(data->dfs_id, data->devfreq_profile.initial_freq);
@@ -410,7 +408,7 @@ static int __init exynos7885_devfreq_mif_init_prepare(struct exynos_devfreq_data
 	data->ops.resume = exynos7885_devfreq_mif_resume;
 	data->ops.cmu_dump = exynos7885_devfreq_mif_cmu_dump;
 
-	_data = data;
+	exynos_data = data;
 
 	return 0;
 }

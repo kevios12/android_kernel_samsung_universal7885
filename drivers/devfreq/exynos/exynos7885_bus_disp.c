@@ -25,11 +25,9 @@
 #include <soc/samsung/cal-if.h>
 #include "../governor.h"
 
-extern bool is_suspend;
-
 #define USE_MIN_MAX_FREQ_FROM_DT
 
-static struct exynos_devfreq_data *_data = NULL;
+static struct exynos_devfreq_data *exynos_data = NULL;
 
 static int exynos7885_devfreq_disp_cmu_dump(struct exynos_devfreq_data *data)
 {
@@ -63,7 +61,7 @@ static int exynos7885_devfreq_disp_suspend(struct exynos_devfreq_data *data)
 	return 0;
 }
 
-void set_devfreq_disp_pm_qos(void)
+void set_devfreq_disp_pm_qos(bool is_suspend)
 {
 	if (_data == NULL) {
 		pr_err("%s: _data is NULL !!\n", __func__);
@@ -71,9 +69,9 @@ void set_devfreq_disp_pm_qos(void)
 	}
 
 	if (is_suspend)
-		exynos7885_devfreq_disp_suspend(_data);
+		exynos7885_devfreq_disp_suspend(exynos_data);
 	else
-		exynos7885_devfreq_disp_resume(_data);
+		exynos7885_devfreq_disp_resume(exynos_data);
 }
 #endif
 static int exynos7885_devfreq_disp_reboot(struct exynos_devfreq_data *data)
@@ -200,7 +198,7 @@ static int exynos7885_devfreq_disp_init_prepare(struct exynos_devfreq_data *data
 	data->ops.reboot = exynos7885_devfreq_disp_reboot;
 	data->ops.cmu_dump = exynos7885_devfreq_disp_cmu_dump;
 
-	_data = data;
+	exynos_data = data;
 
 	return 0;
 }
