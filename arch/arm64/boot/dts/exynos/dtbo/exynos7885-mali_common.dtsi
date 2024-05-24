@@ -26,8 +26,8 @@
 		gpu_pmqos_cpu_cluster_num = <2>;
 		gpu_pmu_status_reg_offset = <0x40A4>;
 		gpu_pmu_status_local_pwr_mask = <0xF>; /*0xF << 0*/
-		gpu_min_clock = <343000>;
-		gpu_dvfs_start_clock = <343000>;
+		gpu_min_clock = <450000>;
+		gpu_dvfs_start_clock = <450000>;
 		gpu_dvfs_bl_config_clock = <0>;
 		gpu_default_voltage = <800000>;
 		gpu_cold_minimum_vol = <0>;
