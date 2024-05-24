@@ -21,7 +21,7 @@
 		samsung,power-domain = <&pd_g3d>;
 		g3d_genpd_name = "pd-g3d"; /*KC: pg-g3d, LT,MK: pd-embedded_g3d*/
 		#cooling-cells = <2>; /* min followed by max */
-		governor = "interactive";
+		governor = "ondemand";
 		gpu_sustainable_info = <0 0 0 0 0>; /* Not used */
 		gpu_pmqos_cpu_cluster_num = <2>;
 		gpu_pmu_status_reg_offset = <0x40A4>;
