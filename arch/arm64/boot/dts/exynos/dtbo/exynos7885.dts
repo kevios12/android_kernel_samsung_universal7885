@@ -148,15 +148,15 @@
 		};
 
 		hmp {
-			up_threshold = <524>;
-			down_threshold = <214>;
-			semiboost_up_threshold = <254>;
-			semiboost_down_threshold = <163>;
-			bootboost-duration-us = <40000000>;
-			down_compensation_timeout = <30>;               /* ms */
+			up_threshold = <461>;
+			down_threshold = <205>;
+			semiboost_up_threshold = <461>;
+			semiboost_down_threshold = <205>;
+			bootboost-duration-us = <30000000>;
+			down_compensation_timeout = <40>;               /* ms */
 			down_compensation_high_freq = <1500000>;        /* min qos lock for little cpu */
-			down_compensation_mid_freq = <1000000>;          /* min qos lock for little cpu */
-			down_compensation_low_freq = <800000>;          /* min qos lock for little cpu */
+			down_compensation_mid_freq = <1500000>;          /* min qos lock for little cpu */
+			down_compensation_low_freq = <1500000>;          /* min qos lock for little cpu */
 			little-id = <1>;
 		};
 

@@ -2718,11 +2718,11 @@ unsigned long exynos_scale_freq_capacity(struct sched_domain *sd, int cpu)
  * tweaking suit particular needs.
  */
 
-unsigned int hmp_up_threshold = 700;
-unsigned int hmp_down_threshold = 256;
+unsigned int hmp_up_threshold = 461;
+unsigned int hmp_down_threshold = 205;
 
-unsigned int hmp_semiboost_up_threshold = 400;
-unsigned int hmp_semiboost_down_threshold = 150;
+unsigned int hmp_semiboost_up_threshold = 461;
+unsigned int hmp_semiboost_down_threshold = 205;
 
 #if defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 /* Ex: 256 = /4, 512 = /2, 1024 = x1, 1536 = x1.5, 2048 = x2 */
@@ -5608,7 +5608,7 @@ done:
  * fastest domain first.
  */
 DEFINE_PER_CPU(struct hmp_domain *, hmp_cpu_domain);
-static const int hmp_max_tasks=5;
+static const int hmp_max_tasks=6;
 
 extern void __init arch_get_hmp_domains(struct list_head *hmp_domains_list);
 
@@ -5774,8 +5774,8 @@ static DEFINE_RAW_SPINLOCK(hmp_selective_boost_lock);
 #define BOOT_BOOST_DURATION 40000000 /* microseconds */
 #define YIELD_CORRECTION_TIME 10000000 /* nanoseconds */
 
-unsigned int hmp_next_up_threshold = 4096;
-unsigned int hmp_next_down_threshold = 4096;
+unsigned int hmp_next_up_threshold = 8196;
+unsigned int hmp_next_down_threshold = 8196;
 
 static inline int hmp_boost(void)
 {
