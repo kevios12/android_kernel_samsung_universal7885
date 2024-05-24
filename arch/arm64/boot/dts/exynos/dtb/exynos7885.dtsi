@@ -452,7 +452,7 @@
 
 		/* Booting value */
 
-		boot_info = <40 267000>;
+		boot_info = <40 167000>;
 		/* boot_qos_timeout, boot_freq */
 
 		/* default dev profile */
