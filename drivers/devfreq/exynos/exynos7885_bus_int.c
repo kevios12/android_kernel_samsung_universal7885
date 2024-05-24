@@ -29,6 +29,10 @@
 
 #include "exynos_ppmu.h"
 
+extern bool is_suspend;
+static unsigned long origin_suspend_freq = 0;
+static struct exynos_devfreq_data *exynos_data = NULL;
+
 static int exynos7885_devfreq_int_cmu_dump(struct exynos_devfreq_data *data)
 {
 	mutex_lock(&data->devfreq->lock);
@@ -37,6 +41,43 @@ static int exynos7885_devfreq_int_cmu_dump(struct exynos_devfreq_data *data)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_DEVFREQ
+static int _exynos7885_devfreq_int_resume(struct exynos_devfreq_data *data)
+{
+	if (pm_qos_request_active(&data->default_pm_qos_min))
+		pm_qos_update_request(&data->default_pm_qos_min,
+				data->default_qos);
+
+	pr_info("%s: set freq to: %u\n", __func__, data->default_qos);
+
+	return 0;
+}
+
+static int exynos7885_devfreq_int_suspend(struct exynos_devfreq_data *data)
+{
+	if (pm_qos_request_active(&data->default_pm_qos_min))
+		pm_qos_update_request(&data->default_pm_qos_min,
+				data->devfreq_profile.suspend_freq);
+
+	pr_info("%s: set freq to: %lu\n", __func__, data->devfreq_profile.suspend_freq);
+
+	return 0;
+}
+
+void set_devfreq_int_pm_qos(void)
+{
+	if (__data == NULL) {
+		pr_err("%s: __data is NULL !!\n", __func__);
+		return;
+	}
+
+	if (is_suspend)
+		exynos7885_devfreq_int_suspend(exynos_data);
+	else
+		_exynos7885_devfreq_int_resume(exynos_data);
+}
+#endif
 
 static int exynos7885_devfreq_int_reboot(struct exynos_devfreq_data *data)
 {
@@ -203,6 +244,8 @@ static int exynos7885_devfreq_int_init_prepare(struct exynos_devfreq_data *data)
 	data->ops.resume = exynos7885_devfreq_int_resume;
 	data->ops.reboot = exynos7885_devfreq_int_reboot;
 	data->ops.cmu_dump = exynos7885_devfreq_int_cmu_dump;
+
+	exynos_data = data;
 
 	return 0;
 }

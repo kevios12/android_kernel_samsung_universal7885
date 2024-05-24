@@ -59,8 +59,13 @@
 extern void set_suspend_cpufreq(bool);
 #endif
 
-bool is_suspend = false;
+#ifdef CONFIG_PM_DEVFREQ
+extern void set_devfreq_mif_pm_qos(void);
+extern void set_devfreq_disp_pm_qos(void);
+extern void set_devfreq_int_pm_qos(void);
+#endif
 
+bool is_suspend = false;
 
 int decon_log_level = 0;
 module_param(decon_log_level, int, 0644);
@@ -778,6 +783,7 @@ blank_exit:
 #ifdef CONFIG_PM_DEVFREQ
 	set_devfreq_mif_pm_qos();
 	set_devfreq_disp_pm_qos();
+	set_devfreq_int_pm_qos();
 #endif
 
 	return ret;
