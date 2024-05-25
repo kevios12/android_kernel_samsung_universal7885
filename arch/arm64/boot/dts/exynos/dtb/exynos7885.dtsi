@@ -447,12 +447,12 @@
 		/* Delay time */
 		use_delay_time = "false";
 
-		freq_info = <333000 167000 167000 167000 333000 167000>;
+		freq_info = <333000 267000 167000 167000 333000 267000>;
 		/* <initial_freq, default_qos, suspend_freq, min, max, reboot_freq> */
 
 		/* Booting value */
 
-		boot_info = <40 167000>;
+		boot_info = <40 267000>;
 		/* boot_qos_timeout, boot_freq */
 
 		/* default dev profile */
