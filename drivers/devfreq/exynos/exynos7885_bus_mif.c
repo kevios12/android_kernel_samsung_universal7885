@@ -40,6 +40,8 @@
 
 #define INT	0
 
+extern bool is_suspend;
+
 static struct exynos_devfreq_data *exynos_data = NULL;
 
 #ifdef CONFIG_EXYNOS_DVFS_MANAGER
@@ -238,7 +240,7 @@ static int exynos7885_devfreq_mif_suspend(struct exynos_devfreq_data *data)
 	return 0;
 }
 
-void set_devfreq_mif_pm_qos(bool is_suspend)
+void set_devfreq_mif_pm_qos(void)
 {
 	if (_data == NULL) {
 		pr_err("%s: _data is NULL !!\n", __func__);

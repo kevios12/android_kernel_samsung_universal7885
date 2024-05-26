@@ -46,6 +46,7 @@
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include <soc/samsung/tmu.h>
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
