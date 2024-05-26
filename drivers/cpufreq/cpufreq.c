@@ -817,8 +817,9 @@ static ssize_t store_user_scaling_max_freq
 			cpu0_max_freq = temp;
 		else
 			cpu4_max_freq = temp;
-	} else
+	} else {
 		goto err;
+	}
 
 	return ret ? ret : count;
 

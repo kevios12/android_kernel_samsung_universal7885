@@ -22,8 +22,9 @@
 /* On-demand governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(95)
 #define DOWN_THRESHOLD_MARGIN			(25)
-#define DEF_SAMPLING_DOWN_FACTOR		(1)
+#define DEF_SAMPLING_DOWN_FACTOR		(20)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
+#define MIN_SAMPLE_RATE				(20000)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 #define MIN_FREQUENCY_UP_THRESHOLD		(40)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
@@ -124,7 +125,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 				else if (policy->cur == DEF_FREQUENCY_STEP_CL0_10)
 					requested_freq = DEF_FREQUENCY_STEP_CL0_11;
 				else
-					return;
+					requested_freq = policy->max;
 			/* Big cpu 4 */
 			} else {
 				if (policy->cur == DEF_FREQUENCY_STEP_CL1_0)
@@ -162,12 +163,10 @@ static void od_check_cpu(int cpu, unsigned int load)
 				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_16)
 					requested_freq = DEF_FREQUENCY_STEP_CL1_17;
 				else
-					return;
+					requested_freq = policy->max;
 			}
-
 			if (requested_freq > policy->max)
 				requested_freq = policy->max;
-
 		} else {
 			/* Boost */
 			requested_freq = policy->max;
@@ -179,8 +178,12 @@ static void od_check_cpu(int cpu, unsigned int load)
 				od_tuners->sampling_down_factor;
 		__cpufreq_driver_target(policy, requested_freq,
 			CPUFREQ_RELATION_H);
+
 		return;
 	}
+
+	/* No longer fully busy, reset rate_mult */
+	dbs_info->rate_mult = 1;
 
 	/*
 	 * if we cannot reduce the frequency anymore, break out early
@@ -188,11 +191,8 @@ static void od_check_cpu(int cpu, unsigned int load)
 	if (policy->cur == policy->min)
 		return;
 
-	/* No longer fully busy, reset rate_mult */
-	dbs_info->rate_mult = 1;
-
 	/* Check for frequency decrease */
-	if (load <= down_threshold) {
+	if (load < down_threshold) {
 		/* Little cpu 0 */
 		if (cpu == 0) {
 			if (policy->cur == DEF_FREQUENCY_STEP_CL0_11)
@@ -218,7 +218,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 			else if (policy->cur == DEF_FREQUENCY_STEP_CL0_1)
 				requested_freq = DEF_FREQUENCY_STEP_CL0_0;
 			else
-				return;
+				requested_freq = policy->min;
 		/* Big cpu 4 */
 		} else {
 			if (policy->cur == DEF_FREQUENCY_STEP_CL1_17)
@@ -256,7 +256,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_1)
 				requested_freq = DEF_FREQUENCY_STEP_CL1_0;
 			else
-				return;
+				requested_freq = policy->min;
 		}
 
 		if (requested_freq < policy->min)
@@ -264,6 +264,8 @@ static void od_check_cpu(int cpu, unsigned int load)
 
 		__cpufreq_driver_target(policy, requested_freq,
 				CPUFREQ_RELATION_L);
+
+		return;
 	}
 }
 
@@ -306,6 +308,7 @@ max_delay:
 static void update_down_threshold(struct od_dbs_tuners *od_tuners)
 {
 	down_threshold = ((od_tuners->up_threshold * DEF_FREQUENCY_STEP_CL0_0 / DEF_FREQUENCY_STEP_CL0_1) - DOWN_THRESHOLD_MARGIN);
+	pr_info("[%s] for CPU - new value: %u\n",__func__, down_threshold);
 }
 
 /************************** sysfs interface ************************/
@@ -601,9 +604,10 @@ static int od_init(struct dbs_data *dbs_data, bool notify)
 #endif
 
 		/* For correct statistics, we need 10 ticks for each measure */
-		dbs_data->min_sampling_rate = MIN_SAMPLING_RATE_RATIO *
-			jiffies_to_usecs(10);
+		dbs_data->min_sampling_rate = jiffies_to_usecs(10);
 	}
+
+	dbs_data->min_sampling_rate = max((unsigned int)MIN_SAMPLE_RATE, dbs_data->min_sampling_rate);
 
 	tuners->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	tuners->ignore_nice_load = 0;
