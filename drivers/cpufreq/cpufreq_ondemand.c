@@ -17,16 +17,14 @@
 #include <linux/slab.h>
 #include <linux/tick.h>
 #include "cpufreq_governor.h"
-#include <linux/pm_qos.h>
 
 /* On-demand governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD		(95)
 #define DOWN_THRESHOLD_MARGIN			(25)
-#define DEF_SAMPLING_DOWN_FACTOR		(20)
+#define DEF_SAMPLING_DOWN_FACTOR		(50)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
-#define MIN_SAMPLE_RATE				(20000)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
-#define MIN_FREQUENCY_UP_THRESHOLD		(40)
+#define MIN_FREQUENCY_UP_THRESHOLD		(45)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define DEF_BOOST				(1)
 #define IO_IS_BUSY				(0)
@@ -47,23 +45,11 @@
 
 /* Cluster 1 big cpu */
 #define DEF_FREQUENCY_STEP_CL1_0               (936000)
-#define DEF_FREQUENCY_STEP_CL1_1               (975000)
-#define DEF_FREQUENCY_STEP_CL1_2               (1000000)
-#define DEF_FREQUENCY_STEP_CL1_3               (1050000)
-#define DEF_FREQUENCY_STEP_CL1_4               (1100000)
-#define DEF_FREQUENCY_STEP_CL1_5               (1144000)
-#define DEF_FREQUENCY_STEP_CL1_6               (1200000)
-#define DEF_FREQUENCY_STEP_CL1_7               (1250000)
-#define DEF_FREQUENCY_STEP_CL1_8               (1300000)
-#define DEF_FREQUENCY_STEP_CL1_9               (1352000)
-#define DEF_FREQUENCY_STEP_CL1_10              (1400000)
-#define DEF_FREQUENCY_STEP_CL1_11              (1450000)
-#define DEF_FREQUENCY_STEP_CL1_12              (1500000)
-#define DEF_FREQUENCY_STEP_CL1_13              (1560000)
-#define DEF_FREQUENCY_STEP_CL1_14              (1600000)
-#define DEF_FREQUENCY_STEP_CL1_15              (1664000)
-#define DEF_FREQUENCY_STEP_CL1_16              (1700000)
-#define DEF_FREQUENCY_STEP_CL1_17              (1768000)
+#define DEF_FREQUENCY_STEP_CL1_1               (1144000)
+#define DEF_FREQUENCY_STEP_CL1_2               (1352000)
+#define DEF_FREQUENCY_STEP_CL1_3               (1560000)
+#define DEF_FREQUENCY_STEP_CL1_4               (1664000)
+#define DEF_FREQUENCY_STEP_CL1_5	       (1768000)
 
 static unsigned int down_threshold = 0;
 
@@ -138,30 +124,6 @@ static void od_check_cpu(int cpu, unsigned int load)
 					requested_freq = DEF_FREQUENCY_STEP_CL1_4;
 				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_4)
 					requested_freq = DEF_FREQUENCY_STEP_CL1_5;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_5)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_6;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_6)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_7;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_7)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_8;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_8)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_9;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_9)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_10;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_10)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_11;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_11)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_12;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_12)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_13;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_13)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_14;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_14)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_15;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_15)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_16;
-				else if (policy->cur == DEF_FREQUENCY_STEP_CL1_16)
-					requested_freq = DEF_FREQUENCY_STEP_CL1_17;
 				else
 					requested_freq = policy->max;
 			}
@@ -221,31 +183,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 				requested_freq = policy->min;
 		/* Big cpu 4 */
 		} else {
-			if (policy->cur == DEF_FREQUENCY_STEP_CL1_17)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_16;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_16)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_15;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_15)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_14;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_14)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_13;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_13)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_12;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_12)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_11;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_11)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_10;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_10)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_9;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_9)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_8;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_8)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_7;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_7)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_6;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_6)
-				requested_freq = DEF_FREQUENCY_STEP_CL1_5;
-			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_5)
+			if (policy->cur == DEF_FREQUENCY_STEP_CL1_5)
 				requested_freq = DEF_FREQUENCY_STEP_CL1_4;
 			else if (policy->cur == DEF_FREQUENCY_STEP_CL1_4)
 				requested_freq = DEF_FREQUENCY_STEP_CL1_3;
@@ -607,8 +545,6 @@ static int od_init(struct dbs_data *dbs_data, bool notify)
 		dbs_data->min_sampling_rate = jiffies_to_usecs(10);
 	}
 
-	dbs_data->min_sampling_rate = max((unsigned int)MIN_SAMPLE_RATE, dbs_data->min_sampling_rate);
-
 	tuners->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	tuners->ignore_nice_load = 0;
 	tuners->io_is_busy = IO_IS_BUSY;
@@ -692,149 +628,8 @@ void update_gov_tunables(bool is_suspend)
 }
 #endif
 
-#ifdef CONFIG_ARCH_EXYNOS
-static int cpufreq_ondemand_cluster1_min_qos_handler(struct notifier_block *b,
-						unsigned long val, void *v)
-{
-	struct od_cpu_dbs_info_s *pcpu;
-	struct od_dbs_tuners *od_tuners;
-	unsigned long flags;
-	int ret = NOTIFY_OK;
-	int cpu = 4; /* policy cpu of cluster 1 */
-
-	pcpu = &per_cpu(od_cpu_dbs_info, cpu);
-
-	mutex_lock(&cpufreq_governor_lock);
-
-	if (!pcpu->policy || !pcpu->policy->governor_data ||
-		!pcpu->policy->governor) {
-		ret = NOTIFY_BAD;
-		goto exit;
-	}
-
-	//trace_cpufreq_ondemand_cpu_min_qos(cpu, val, pcpu->policy->cur);
-
-	if (val < pcpu->policy->cur)
-		od_tuners = pcpu->policy->governor_data;
-
-exit:
-	mutex_unlock(&cpufreq_governor_lock);
-	return ret;
-}
-
-static struct notifier_block cpufreq_ondemand_cluster1_min_qos_notifier = {
-	.notifier_call = cpufreq_ondemand_cluster1_min_qos_handler,
-};
-
-static int cpufreq_ondemand_cluster1_max_qos_handler(struct notifier_block *b,
-						unsigned long val, void *v)
-{
-	struct od_cpu_dbs_info_s *pcpu;
-	struct od_dbs_tuners *od_tuners;
-	unsigned long flags;
-	int ret = NOTIFY_OK;
-	int cpu = 4; /* policy cpu of cluster1 */
-
-	pcpu = &per_cpu(od_cpu_dbs_info, cpu);
-
-	mutex_lock(&cpufreq_governor_lock);
-
-	if (!pcpu->policy || !pcpu->policy->governor_data ||
-		!pcpu->policy->governor) {
-		ret = NOTIFY_BAD;
-		goto exit;
-	}
-
-	//trace_cpufreq_ondemand_cpu_max_qos(cpu, val, pcpu->policy->cur);
-
-	if (val > pcpu->policy->cur)
-		od_tuners = pcpu->policy->governor_data;
-
-exit:
-	mutex_unlock(&cpufreq_governor_lock);
-	return ret;
-}
-
-static struct notifier_block cpufreq_ondemand_cluster1_max_qos_notifier = {
-	.notifier_call = cpufreq_ondemand_cluster1_max_qos_handler,
-};
-
-static int cpufreq_ondemand_cluster0_min_qos_handler(struct notifier_block *b,
-						unsigned long val, void *v)
-{
-	struct od_cpu_dbs_info_s *pcpu;
-	struct od_dbs_tuners *od_tuners;
-	unsigned long flags;
-	int ret = NOTIFY_OK;
-	int cpu = 0; /* policy cpu of cluster0 */
-
-	pcpu = &per_cpu(od_cpu_dbs_info, cpu);
-
-	mutex_lock(&cpufreq_governor_lock);
-
-	if (!pcpu->policy || !pcpu->policy->governor_data ||
-		!pcpu->policy->governor) {
-		ret = NOTIFY_BAD;
-		goto exit;
-	}
-
-	//trace_cpufreq_ondemand_cpu_min_qos(cpu, val, pcpu->policy->cur);
-
-	if (val < pcpu->policy->cur)
-		od_tuners = pcpu->policy->governor_data;
-
-exit:
-	mutex_unlock(&cpufreq_governor_lock);
-	return ret;
-}
-
-static struct notifier_block cpufreq_ondemand_cluster0_min_qos_notifier = {
-	.notifier_call = cpufreq_ondemand_cluster0_min_qos_handler,
-};
-
-static int cpufreq_ondemand_cluster0_max_qos_handler(struct notifier_block *b,
-						unsigned long val, void *v)
-{
-	struct od_cpu_dbs_info_s *pcpu;
-	struct od_dbs_tuners *od_tuners;
-	unsigned long flags;
-	int ret = NOTIFY_OK;
-	int cpu = 0; /* policy cpu of cluster0 */
-
-	pcpu = &per_cpu(od_cpu_dbs_info, cpu);
-
-	mutex_lock(&cpufreq_governor_lock);
-
-	if (!pcpu->policy ||!pcpu->policy->governor_data ||
-		!pcpu->policy->governor) {
-		ret = NOTIFY_BAD;
-		goto exit;
-	}
-
-	//trace_cpufreq_ondemand_cpu_max_qos(cpu, val, pcpu->policy->cur);
-
-	if (val > pcpu->policy->cur)
-		od_tuners = pcpu->policy->governor_data;
-
-exit:
-	mutex_unlock(&cpufreq_governor_lock);
-	return ret;
-}
-
-static struct notifier_block cpufreq_ondemand_cluster0_max_qos_notifier = {
-	.notifier_call = cpufreq_ondemand_cluster0_max_qos_handler,
-};
-#endif
-
 static int __init cpufreq_gov_dbs_init(void)
 {
-#ifdef CONFIG_ARCH_EXYNOS
-	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MIN, &cpufreq_ondemand_cluster1_min_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MAX, &cpufreq_ondemand_cluster1_max_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MIN, &cpufreq_ondemand_cluster0_min_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MAX, &cpufreq_ondemand_cluster0_max_qos_notifier);
-#endif
-
 	return cpufreq_register_governor(&cpufreq_gov_ondemand);
 }
 
