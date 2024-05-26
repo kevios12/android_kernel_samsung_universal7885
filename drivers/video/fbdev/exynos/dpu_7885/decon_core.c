@@ -39,6 +39,7 @@
 #include <soc/samsung/cal-if.h>
 #include <soc/samsung/exynos-pd.h>
 #include <dt-bindings/clock/exynos7885.h>
+#include <linux/cpufreq.h>
 
 #include "decon.h"
 #include "dsim.h"
@@ -54,10 +55,6 @@
 
 /*#define BRINGUP_DECON_BIST*/
 #define DECON_DEBUG_SFR 0x14860400
-
-#ifdef CONFIG_CPU_FREQ_SUSPEND
-extern void set_suspend_cpufreq(bool is_suspend);
-#endif
 
 #ifdef CONFIG_PM_DEVFREQ
 extern void set_devfreq_mif_pm_qos(bool is_suspend);
@@ -726,6 +723,7 @@ static void suspend_handler_thread(struct work_struct *suspend_handler_work)
 #ifdef CONFIG_CPU_FREQ_SUSPEND
 	set_suspend_cpufreq(is_suspend);
 #endif
+	update_gov_tunables(is_suspend);
 	set_gpu_policy(is_suspend);
 }
 static DECLARE_WORK(suspend_handler_work, suspend_handler_thread);
