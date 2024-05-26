@@ -1045,10 +1045,12 @@ static __init void set_boot_qos(struct exynos_cpufreq_domain *domain,
 	if (!of_property_read_u32(dn, "pm_qos-booting", &val))
 		boot_qos = min(boot_qos, val);
 
+	domain->boot_freq = boot_qos;
+
 	pm_qos_update_request_timeout(&domain->min_qos_req,
-			boot_qos, 40 * USEC_PER_SEC);
+			boot_qos, 30 * USEC_PER_SEC);
 	pm_qos_update_request_timeout(&domain->max_qos_req,
-			boot_qos, 40 * USEC_PER_SEC);
+			boot_qos, 30 * USEC_PER_SEC);
 
 }
 
@@ -1249,17 +1251,15 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 	domain->min_freq = cal_dfs_get_min_freq(domain->cal_id);
 
 	/*
-	 * If max-freq property exists in device tree, max frequency is
-	 * selected to smaller one between the value defined in device
-	 * tree and CAL. In case of min-freq, min frequency is selected
-	 * to bigger one.
+	 * If max-freq and min-freq property exists in device tree,
+	 * then they will be used.
 	 */
 #ifndef CONFIG_EXYNOS_HOTPLUG_GOVERNOR
 	if (!of_property_read_u32(dn, "max-freq", &val))
-		domain->max_freq = min(domain->max_freq, val);
+		domain->max_freq = val;
 #endif
 	if (!of_property_read_u32(dn, "min-freq", &val))
-		domain->min_freq = max(domain->min_freq, val);
+		domain->min_freq = val;
 
 	domain->boot_freq = cal_dfs_get_boot_freq(domain->cal_id);
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);

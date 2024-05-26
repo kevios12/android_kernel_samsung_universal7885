@@ -15,7 +15,7 @@
 			/* for level	:	1_Head */
 			input_booster,cpu_freqs = <1144000>;
 			input_booster,hmp_boost = <1>;
-			input_booster,kfc_freqs = <0>;
+			input_booster,kfc_freqs = <839000>;
 			input_booster,mif_freqs = <0>;
 			input_booster,int_freqs = <0>;
 
@@ -34,7 +34,7 @@
 			/* for level	:	1_Head */
 			input_booster,cpu_freqs = <1144000>;
 			input_booster,hmp_boost = <1>;
-			input_booster,kfc_freqs = <0>;
+			input_booster,kfc_freqs = <839000>;
 			input_booster,mif_freqs = <0>;
 			input_booster,int_freqs = <0>;
 
@@ -184,7 +184,7 @@
 			/* for level	:	1_Head */
 			input_booster,cpu_freqs = <1872000>;
 			input_booster,hmp_boost = <1>;
-			input_booster,kfc_freqs = <0>;
+			input_booster,kfc_freqs = <839000>;
 			input_booster,mif_freqs = <0>;
 			input_booster,int_freqs = <0>;
 

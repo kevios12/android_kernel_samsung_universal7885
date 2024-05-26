@@ -12,7 +12,7 @@
 #ifndef __ASM_ARCH_TMU_H
 #define __ASM_ARCH_TMU_H
 
-#define EXYNOS_MAX_TEMP		125
+#define EXYNOS_MAX_TEMP		135
 #define EXYNOS_MIN_TEMP		10
 #define EXYNOS_COLD_TEMP	15
 
