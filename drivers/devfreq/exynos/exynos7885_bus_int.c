@@ -29,8 +29,6 @@
 
 #include "exynos_ppmu.h"
 
-extern bool is_suspend;
-
 static struct exynos_devfreq_data *exynos_data = NULL;
 
 static int exynos7885_devfreq_int_cmu_dump(struct exynos_devfreq_data *data)
@@ -65,7 +63,7 @@ static int exynos7885_devfreq_int_suspend(struct exynos_devfreq_data *data)
 	return 0;
 }
 
-void set_devfreq_int_pm_qos(void)
+void set_devfreq_int_pm_qos(bool is_suspend)
 {
 	if (exynos_data == NULL) {
 		pr_err("%s: __data is NULL !!\n", __func__);
