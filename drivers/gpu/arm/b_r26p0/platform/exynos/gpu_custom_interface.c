@@ -47,7 +47,7 @@ extern bool gpu_always_on;
 extern bool is_suspend;
 
 /* for ondemand gov */
-unsigned int gpu_up_threshold = 75;
+unsigned int gpu_up_threshold = 95;
 bool gpu_boost = true;
 unsigned int gpu_down_threshold = 0;
 #define DOWN_THRESHOLD_MARGIN			(25)
@@ -1694,7 +1694,7 @@ static ssize_t set_kernel_sysfs_up_threshold(struct kobject *kobj, struct kobj_a
 
 	if (ret != 1 || input > GPU_MAX_UP_THRESHOLD ||
 			input < GPU_MIN_UP_THRESHOLD)
-		return -EINVAL;
+		goto err;
 
 	gpu_up_threshold = input;
 
@@ -1702,6 +1702,10 @@ static ssize_t set_kernel_sysfs_up_threshold(struct kobject *kobj, struct kobj_a
 	calc_gpu_down_threshold();
 
 	return count;
+
+err:
+	pr_err("[%s] invalid cmd\n",__func__);
+	return -EINVAL;
 }
 
 static ssize_t show_kernel_sysfs_utilization(struct kobject *kobj, struct kobj_attribute *attr, char *buf)

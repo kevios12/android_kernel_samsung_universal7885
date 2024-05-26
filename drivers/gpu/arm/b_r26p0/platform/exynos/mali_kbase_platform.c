@@ -246,7 +246,11 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 #ifdef CONFIG_MALI_DVFS
 	gpu_update_config_data_int(np, "g3d_cmu_cal_id", &platform->g3d_cmu_cal_id);
 	gpu_update_config_data_string(np, "governor", &of_string);
-	if (!strncmp("interactive", of_string, strlen("interactive"))) {
+	if (!strncmp("ondemand", of_string, strlen("ondemand"))) {
+		platform->governor_type = G3D_DVFS_GOVERNOR_ONDEMAND;
+	}
+#ifndef BUILD_ONLY_ONDEMAND_GOV
+	else if (!strncmp("interactive", of_string, strlen("interactive"))) {
 		platform->governor_type = G3D_DVFS_GOVERNOR_INTERACTIVE;
 		gpu_update_config_data_int_array(np, "interactive_info", of_data_int_array, 3);
 		platform->interactive.highspeed_clock = of_data_int_array[0] == 0 ? 500 : (u32) of_data_int_array[0];
@@ -258,11 +262,10 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 		platform->governor_type = G3D_DVFS_GOVERNOR_BOOSTER;
 	} else if (!strncmp("dynamic", of_string, strlen("dynamic"))) {
 		platform->governor_type = G3D_DVFS_GOVERNOR_DYNAMIC;
-	} else if (!strncmp("ondemand", of_string, strlen("ondemand"))) {
-		platform->governor_type = G3D_DVFS_GOVERNOR_ONDEMAND;
 	} else {
 		platform->governor_type = G3D_DVFS_GOVERNOR_DEFAULT;
 	}
+#endif
 
 	gpu_update_config_data_int(np, "gpu_dvfs_start_clock", &platform->gpu_dvfs_start_clock);
 	gpu_update_config_data_int_array(np, "gpu_dvfs_table_size", of_data_int_array, 2);

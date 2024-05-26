@@ -38,6 +38,12 @@
 #include <linux/battery_saver.h>
 #include <trace/events/power.h>
 
+unsigned int cpu0_min_freq = 0;
+unsigned int cpu0_max_freq = 0;
+
+unsigned int cpu4_min_freq = 0;
+unsigned int cpu4_max_freq = 0;
+
 static LIST_HEAD(cpufreq_policy_list);
 
 static inline bool policy_is_inactive(struct cpufreq_policy *policy)
@@ -720,6 +726,8 @@ show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
+show_one(user_scaling_min_freq, min);
+show_one(user_scaling_max_freq, max);
 
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {
@@ -759,38 +767,65 @@ int cpufreq_update_freq(int cpu, unsigned int min, unsigned int max)
 }
 EXPORT_SYMBOL(cpufreq_update_freq);
 
-/**
- * cpufreq_per_cpu_attr_write() / store_##file_name() - sysfs write access
- */
-#define store_one(file_name, object)			\
-static ssize_t store_##file_name					\
-(struct cpufreq_policy *policy, const char *buf, size_t count)		\
-{									\
-	int ret, temp;							\
-	struct cpufreq_policy new_policy;				\
-									\
-	if (&policy->object == &policy->min &&				\
-			is_battery_saver_on())				\
-		return count;						\
-									\
-	memcpy(&new_policy, policy, sizeof(*policy));			\
-	new_policy.min = policy->user_policy.min;			\
-	new_policy.max = policy->user_policy.max;			\
-									\
-	ret = sscanf(buf, "%u", &new_policy.object);			\
-	if (ret != 1)							\
-		return -EINVAL;						\
-									\
-	temp = new_policy.object;					\
-	ret = cpufreq_set_policy(policy, &new_policy);		\
-	if (!ret)							\
-		policy->user_policy.object = temp;			\
-									\
-	return ret ? ret : count;					\
+static ssize_t store_user_scaling_min_freq
+(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	int ret, temp;
+	struct cpufreq_policy new_policy;
+
+	memcpy(&new_policy, policy, sizeof(*policy));
+
+	ret = sscanf(buf, "%u", &new_policy.min);
+	if (ret != 1)
+		goto err;
+
+	temp = new_policy.min;
+	ret = cpufreq_set_policy(policy, &new_policy);
+	if (!ret) {
+		policy->user_policy.min = temp;
+		if (policy->cpu == 0)
+			cpu0_min_freq = temp;
+		else
+			cpu4_min_freq = temp;
+	} else
+		goto err;
+
+	return ret ? ret : count;
+
+err:
+	pr_err("[%s] invalid cmd\n",__func__);
+	return ret ? ret : count;
 }
 
-store_one(scaling_min_freq, min);
-store_one(scaling_max_freq, max);
+static ssize_t store_user_scaling_max_freq
+(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	int ret, temp;
+	struct cpufreq_policy new_policy;
+
+	memcpy(&new_policy, policy, sizeof(*policy));
+
+	ret = sscanf(buf, "%u", &new_policy.max);
+	if (ret != 1)
+		goto err;
+
+	temp = new_policy.max;
+	ret = cpufreq_set_policy(policy, &new_policy);
+	if (!ret) {
+		policy->user_policy.max = temp;
+		if (policy->cpu == 0)
+			cpu0_max_freq = temp;
+		else
+			cpu4_max_freq = temp;
+	} else
+		goto err;
+
+	return ret ? ret : count;
+
+err:
+	pr_err("[%s] invalid cmd\n",__func__);
+	return ret ? ret : count;
+}
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
@@ -963,8 +998,10 @@ cpufreq_freq_attr_ro(scaling_cur_freq);
 cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
-cpufreq_freq_attr_rw(scaling_min_freq);
-cpufreq_freq_attr_rw(scaling_max_freq);
+cpufreq_freq_attr_ro(scaling_min_freq);
+cpufreq_freq_attr_ro(scaling_max_freq);
+cpufreq_freq_attr_rw(user_scaling_min_freq);
+cpufreq_freq_attr_rw(user_scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
 
@@ -974,6 +1011,8 @@ static struct attribute *default_attrs[] = {
 	&cpuinfo_transition_latency.attr,
 	&scaling_min_freq.attr,
 	&scaling_max_freq.attr,
+	&user_scaling_min_freq.attr,
+	&user_scaling_max_freq.attr,
 	&affected_cpus.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
