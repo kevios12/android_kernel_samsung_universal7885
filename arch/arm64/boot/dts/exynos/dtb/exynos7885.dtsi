@@ -108,12 +108,10 @@
 		};
 
 		hmp {
-			up_threshold = <461>;
-			down_threshold = <205>;
-			semiboost_up_threshold = <461>;
-			semiboost_down_threshold = <205>;
-			bootboost-duration-us = <30000000>;
-			down_compensation_timeout = <40>;               /* ms */
+			up_threshold = <256>;
+			down_threshold = <64>;
+			bootboost-duration-us = <40000000>;
+			down_compensation_timeout = <0>;               /* ms */
 			down_compensation_high_freq = <1500000>;        /* min qos lock for little cpu */
 			down_compensation_mid_freq = <1500000>;          /* min qos lock for little cpu */
 			down_compensation_low_freq = <1500000>;          /* min qos lock for little cpu */
@@ -2324,8 +2322,8 @@
 		sensors = <1>;
 		sensing_mode = "max";
 		hotplug_enable = <1>;
-		hotplug_in_threshold = <100>;
-		hotplug_out_threshold = <110>;
+		hotplug_in_threshold = <81>;
+		hotplug_out_threshold = <86>;
 		#include "exynos7872-tmu-sensor-conf.dtsi"
 	};
 

@@ -44,8 +44,8 @@
 		gpu_runtime_pm_delay_time = <50>;
 		gpu_dvfs_polling_time = <30>;
 		gpu_pmqos_int_disable = <0>;
-		gpu_pmqos_mif_max_clock = <1794000>;
-		gpu_pmqos_mif_max_clock_base = <545000>;
+		gpu_pmqos_mif_max_clock = <0>;
+		gpu_pmqos_mif_max_clock_base = <0>;
 		gpu_cl_dvfs_start_base = <0>;
 		gpu_debug_level = <3>; /*DEBUG(1) INFO(2) WARNING(3) ERROR(4)*/
 		gpu_trace_level = <0>; /*TRACE_ALL*/

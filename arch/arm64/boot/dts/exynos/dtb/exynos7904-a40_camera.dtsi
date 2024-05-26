@@ -205,8 +205,8 @@
 		table0 {
 			desc = "default";
 
-			default_int = <DVFS_INT_L4>;
-			default_cam = <DVFS_CAM_L0>;
+			default_int = <DVFS_INT_L0>;
+			default_cam = <DVFS_CAM_L2>;
 			default_mif = <DVFS_MIF_L0>;
 			default_i2c = <0>;
 			default_hpg = <1>;
@@ -331,21 +331,21 @@
 			preview_high_speed_fps_i2c = <0>;
 			preview_high_speed_fps_hpg = <1>;
 
-			video_high_speed_60fps_int = <DVFS_INT_L4>;
+			video_high_speed_60fps_int = <DVFS_INT_L0>;
 			video_high_speed_60fps_cam = <DVFS_CAM_L2>;
-			video_high_speed_60fps_mif = <DVFS_MIF_L5>;
+			video_high_speed_60fps_mif = <DVFS_MIF_L0>;
 			video_high_speed_60fps_i2c = <0>;
 			video_high_speed_60fps_hpg = <1>;
 
-			video_high_speed_120fps_int = <DVFS_INT_L4>;
+			video_high_speed_120fps_int = <DVFS_INT_L0>;
 			video_high_speed_120fps_cam = <DVFS_CAM_L2>;
-			video_high_speed_120fps_mif = <DVFS_MIF_L5>;
+			video_high_speed_120fps_mif = <DVFS_MIF_L0>;
 			video_high_speed_120fps_i2c = <0>;
 			video_high_speed_120fps_hpg = <6>;
 
-			max_int = <DVFS_INT_L4>;
+			max_int = <DVFS_INT_L2>;
 			max_cam = <DVFS_CAM_L0>;
-			max_mif = <DVFS_MIF_L0>;
+			max_mif = <DVFS_MIF_L2>;
 			max_i2c = <0>;
 			max_hpg = <1>;
 		};
@@ -353,8 +353,8 @@
 		table1 {
 			desc = "DVFS table for HAL3";
 
-			default_int = <DVFS_INT_L4>;
-			default_cam = <DVFS_CAM_L0>;
+			default_int = <DVFS_INT_L0>;
+			default_cam = <DVFS_CAM_L2>;
 			default_mif = <DVFS_MIF_L0>;
 			default_i2c = <0>;
 			default_hpg = <1>;
@@ -491,9 +491,9 @@
 			video_high_speed_120fps_i2c = <0>;
 			video_high_speed_120fps_hpg = <6>;
 
-			max_int = <DVFS_INT_L4>;
+			max_int = <DVFS_INT_L2>;
 			max_cam = <DVFS_CAM_L0>;
-			max_mif = <DVFS_MIF_L0>;
+			max_mif = <DVFS_MIF_L2>;
 			max_i2c = <0>;
 			max_hpg = <1>;
 		};
