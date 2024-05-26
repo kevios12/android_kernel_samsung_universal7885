@@ -399,7 +399,7 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 	if (!domain)
 		return -EINVAL;
-
+#if 0
 	/* To handle reboot faster, it does not thrrotle frequency of domain0 */
 	if (system_state == SYSTEM_RESTART && domain->id != 0)
 		freq = domain->min_freq;
@@ -411,7 +411,7 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 	/* To guarantee applying frequency, update_freq() is called explicitly */
 	update_freq(domain, freq);
-
+#endif
 	/*
 	 * Although cpufreq governor is stopped in cpufreq_suspend(),
 	 * afterwards, frequency change can be requested by
@@ -431,10 +431,10 @@ static int exynos_cpufreq_resume(struct cpufreq_policy *policy)
 		return -EINVAL;
 
 	enable_domain(domain);
-
+/*
 	pm_qos_update_request(&domain->min_qos_req, domain->min_freq);
 	pm_qos_update_request(&domain->max_qos_req, domain->max_freq);
-
+*/
 	return 0;
 }
 
@@ -515,7 +515,7 @@ out:
 }
 module_param_call(cpu4_suspend_max_freq, set_cpu4_suspend_max_freq, param_get_int, &cpu4_suspend_max_freq, 0664);
 
-void set_suspend_cpufreq(bool suspend)
+void set_suspend_cpufreq(bool is_suspend)
 {
 	static bool update_cpu0, update_cpu4 = false;
 
@@ -528,8 +528,12 @@ void set_suspend_cpufreq(bool suspend)
 				cpu0_suspend_min_freq = cpu0_min_freq;
 
 			/* set min/max cpu0 freq for suspend */
-			cpufreq_update_freq(0, cpu0_suspend_min_freq, cpu0_suspend_max_freq);
-			update_cpu0 = true;
+			if (cpufreq_update_freq(0, cpu0_suspend_min_freq, cpu0_suspend_max_freq)) {
+				pr_err("%s: failed to update cpu0 while suspend !\n", __func__);
+				update_cpu0 = false;
+			} else {
+				update_cpu0 = true;
+			}
 		}
 
 		if (cpu4_suspend_max_freq) {
@@ -537,22 +541,30 @@ void set_suspend_cpufreq(bool suspend)
 				cpu4_suspend_min_freq = cpu4_min_freq;
 
 			/* set min/max cpu4 freq for suspend */
-			cpufreq_update_freq(4, cpu4_suspend_min_freq, cpu4_suspend_max_freq);
-			update_cpu4 = true;
+			if (cpufreq_update_freq(4, cpu4_suspend_min_freq, cpu4_suspend_max_freq)) {
+				pr_err("%s: failed to update cpu4 while suspend !\n", __func__);
+				update_cpu4 = false;
+			} else {
+				update_cpu4 = true;
+			}
 		}
 	} else {
-		/* resume */
+		/* resumed */
 		/* restore previous min/max cpufreq */
-		if (update_cpu0)
-			cpufreq_update_freq(0, cpu0_min_freq, cpu0_max_freq);
-		if (update_cpu4)
-			cpufreq_update_freq(4, cpu4_min_freq, cpu4_max_freq);
+		if (update_cpu0) {
+			if (cpufreq_update_freq(0, cpu0_min_freq, cpu0_max_freq))
+				pr_err("%s: failed to update cpu0 while resume !\n", __func__);
+		}
+		if (update_cpu4) {
+			if (cpufreq_update_freq(4, cpu4_min_freq, cpu4_max_freq))
+				pr_err("%s: failed to update cpu4 while resume !\n", __func__);
+		}
 
 		update_cpu0 = false;
 		update_cpu4 = false;
 	}
 
-	update_gov_tunables(suspend);
+	update_gov_tunables(is_suspend);
 }
 #endif // CONFIG_CPU_FREQ_SUSPEND
 
