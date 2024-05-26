@@ -459,13 +459,13 @@ gov_sys_pol_attr_ro(down_threshold);
 
 static struct attribute *dbs_attributes_gov_sys[] = {
 	&sampling_rate_min_gov_sys.attr,
-	&down_threshold_gov_pol.attr,
+	&down_threshold_gov_sys.attr,
 	&sampling_rate_gov_sys.attr,
 	&up_threshold_gov_sys.attr,
 	&sampling_down_factor_gov_sys.attr,
 	&ignore_nice_load_gov_sys.attr,
 	&io_is_busy_gov_sys.attr,
-	&boost_gov_pol.attr,
+	&boost_gov_sys.attr,
 	NULL
 };
 
@@ -476,6 +476,7 @@ static struct attribute_group od_attr_group_gov_sys = {
 
 static struct attribute *dbs_attributes_gov_pol[] = {
 	&sampling_rate_min_gov_pol.attr,
+	&down_threshold_gov_pol.attr,
 	&sampling_rate_gov_pol.attr,
 	&up_threshold_gov_pol.attr,
 	&sampling_down_factor_gov_pol.attr,
