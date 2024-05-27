@@ -37,6 +37,7 @@
 #endif
 
 extern struct kbase_device *pkbdev;
+extern bool gpu_always_on;
 
 int gpu_pmqos_dvfs_min_lock(int level)
 {
@@ -106,7 +107,7 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	static bool prev_tmu_status = true;
 #ifdef CONFIG_MALI_DVFS
 	static bool prev_dvfs_status = true;
-#endif /* CONFIG_MALI_DVFS */
+#endif
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
 
 	if (!platform)
@@ -122,7 +123,7 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 		prev_tmu_status = platform->tmu_status;
 #ifdef CONFIG_MALI_DVFS
 		prev_dvfs_status = platform->dvfs_status;
-#endif /* CONFIG_MALI_DVFS */
+#endif
 		prev_policy = kbase_pm_get_policy(pkbdev);
 	}
 
@@ -132,7 +133,7 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 #ifdef CONFIG_MALI_DVFS
 		if (!platform->dvfs_status)
 			gpu_dvfs_on_off(true);
-#endif /* CONFIG_MALI_DVFS */
+#endif
 		cur_state = false;
 	} else {
 		policy_count = kbase_pm_list_policies(&policy_list);
@@ -170,7 +171,7 @@ void set_gpu_policy(bool is_suspend)
 		return;
 	}
 
-	policy_count = kbase_pm_list_policies(pkbdev, &policy_list);
+	policy_count = kbase_pm_list_policies(&policy_list);
 
 	if (is_suspend) {
 		policy = "coarse_demand";
