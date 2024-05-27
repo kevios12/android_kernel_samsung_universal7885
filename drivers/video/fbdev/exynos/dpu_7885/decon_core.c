@@ -784,6 +784,8 @@ blank_exit:
 	decon_hiber_unblock(decon);
 	decon_info("%s - blank_mode: %d, %d\n", __func__, blank_mode, ret);
 
+	set_gpu_policy();
+
 	if (blank_mode == FB_BLANK_UNBLANK)
 		is_suspend = false;
 	else
