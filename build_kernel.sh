@@ -190,7 +190,13 @@ select_device() {
 }
 
 build_kernel() {
-	echo -e "${BLUE}"
+	clear
+	echo -e "${YELLOW}"
+	echo "Compile Kernel, please wait ..."
+	echo ""
+	echo "Note that u see only a blinking / freezed Cursor but the script is running."
+	echo "Troubleshoot: if u feal that the script takes to long, press ctl-c and check compile.log"
+	echo ""
 	PATH=$TOOLCHAIN:$PATH \
 		make O=out -j$(nproc --all) \
 		ARCH=arm64 \
@@ -200,8 +206,7 @@ build_kernel() {
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
 		CROSS_COMPILE=$CROSS \
-		CROSS_COMPILE_ARM32=$CROSS_ARM32 \
-		&> compilelog.txt
+		CROSS_COMPILE_ARM32=$CROSS_ARM32 &> compile.log
 	echo -e "${NC}"
 	clear
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
