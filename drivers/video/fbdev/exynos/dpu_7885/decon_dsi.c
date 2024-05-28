@@ -17,6 +17,7 @@
 #include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/irq.h>
+#include <linux/kthread.h>
 #include <media/v4l2-subdev.h>
 #include <linux/exynos-wd.h>
 
@@ -111,8 +112,8 @@ int decon_register_irq(struct decon_device *decon)
 			return -ENOENT;
 		}
 
-		ret = devm_request_irq(dev, res->start, decon_irq_handler, 0,
-				pdev->name, decon);
+		ret = devm_request_irq(dev, res->start, decon_irq_handler,
+				IRQF_PERF_AFFINE, pdev->name, decon);
 		if (ret) {
 			decon_err("failed to install FIFO irq\n");
 			return ret;
@@ -329,7 +330,8 @@ int decon_register_ext_irq(struct decon_device *decon)
 
 	decon_info("%s: gpio(%d)\n", __func__, decon->res.irq);
 	ret = devm_request_irq(dev, decon->res.irq, decon_ext_irq_handler,
-			IRQF_TRIGGER_RISING, pdev->name, decon);
+			IRQF_TRIGGER_RISING | IRQF_PERF_AFFINE,
+			pdev->name, decon);
 
 	decon->eint_status = 1;
 
