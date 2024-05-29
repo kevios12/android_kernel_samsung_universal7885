@@ -7,6 +7,9 @@ dtbo-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
 dtbo-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/exynos7885-jackpotlte_dummy.dtbo
 
+dtbo-$(CONFIG_MACH_EXYNOS7885_JACKPOT2LTE_GLOBAL) := \
+	exynos/exynos7885-jackpot2lte_dummy.dtbo
+
 dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/exynos7885-jackpotlte_eur_open_03.dtb \
 	exynos/exynos7885-jackpotlte_eur_open_04.dtb \
@@ -23,6 +26,13 @@ dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/exynos7885-jackpotlte_kor_05.dtb \
 	exynos/exynos7885-jackpotlte_kor_06.dtb \
 	exynos/exynos7885-jackpotlte_kor_07.dtb
+
+dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOT2LTE_GLOBAL) := \
+	exynos/exynos7885-jackpot2lte_eur_open_03.dtb \
+	exynos/exynos7885-jackpot2lte_eur_open_04.dtb \
+	exynos/exynos7885-jackpot2lte_eur_open_05.dtb \
+	exynos/exynos7885-jackpot2lte_eur_open_06.dtb \
+	exynos/exynos7885-jackpot2lte_eur_open_07.dtb
 
 dtb-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
 	exynos/exynos7885.dtb
