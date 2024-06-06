@@ -1018,9 +1018,9 @@ config SND_SOC_TPA6130A2
 
 config JACK_FIX
         bool "Headphone Jack fix"
-        default y
+        default n
         help
-          This fix is enabled by Default. It fixes sound codec compatibility
+          This fix is Disabled by Default. It fixes sound codec compatibility
           issue between 2 different firmwares(Q/R). AOSP Roms should have it 
           enabled. OneUI doesn't need it, so it should be No.
 
