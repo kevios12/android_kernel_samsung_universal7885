@@ -38,29 +38,24 @@ init() {
 	echo -e "${YELLOW}Warning: Your BOT Token or Chat ID is Empty!${NC}\n"
 	sleep 2
 	clear
-	echo -e "${GREEN}Do u want to make Clean Build?${NC}\n"
-	select clean in "Yes" "No" "Exit"; do
-		case "$clean" in
-		"Yes")
-			echo -e "${YELLOW}Cleaning up ...${NC}\n"
-			rm -rf out && make clean && make mrproper
-			toolchain
-			break
-			;;
-		"No")
-			toolchain
-			break
-			;;
-		"Exit")
-			clear
-			echo -e "${RED}Exiting ...${NC}\n"
-			break
-			;;
-		*)
-			echo -e "${RED}Invalid option. Please select again.${NC}\n"
-			;;
-		esac
+	echo -e "${YELLOW}Do you want to make a Clean Build? [yes|no]${NC}\n"
+	printf "${GREEN}Hint: Type Yes or No after '>>>'.${NC}\n"
+	printf ">>> "
+	read -r ans
+	ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
+	while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
+		printf "Please answer 'yes' or 'no':'\\n"
+		printf ">>> "
+		read -r ans
+		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
 	done
+	if [ "$ans" = "YES" ]; then
+		echo -e "${YELLOW}Cleaning up ...${NC}\n"
+		rm -rf out && make clean && make mrproper
+		toolchain
+	elif [ "$ans" = "NO" ]; then
+		toolchain
+	fi
 }
 
 # Let's do a Toolchain check
@@ -68,30 +63,31 @@ toolchain() {
 	clear
 	if [ -d "$TOOLCHAIN" ]; then
 		clear
-		echo -e "${GREEN}Looks like you already have a Toolchain.${NC}\n"
-		echo -e "${YELLOW}Do you want to continue and start the Build?${NC}\n"
-		select choice in "Continue" "Exit"; do
-			case "$choice" in
-			"Continue")
-				clear
-				select_device
-				break
-				;;
-			"Exit")
-				clear
-				echo -e "${RED}Exiting ...${NC}\n"
-				exit
-				;;
-			*)
-				echo -e "${RED}Invalid option. Please select again.${NC}\n"
-				;;
-			esac
+		echo -e "${RED}Looks like you already have a Toolchain.${NC}\n"
+		echo -e "${YELLOW}Do you want to continue and start the Build? [yes|no]${NC}"
+		printf "${GREEN}Hint: Type Yes or No after '>>>'.${NC}\n"
+		printf ">>> "
+		read -r ans
+		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
+		while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
+			echo -e "Please answer 'yes' or 'no':"
+			echo -e ">>> "
+			read -r ans
+			ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
 		done
+		if [ "$ans" = "YES" ]; then
+			clear
+			select_device
+		elif [ "$ans" = "NO" ]; then
+			clear
+			echo -e "${RED}Exiting ...${NC}\n"
+			exit 2
+		fi
 	else
 		echo -e "${RED}No Toolchain found!${NC}\n"
 		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}\n"
 		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}\n"
-		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}\n"
+		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}"
 		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" ]]; then
 			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 23.10/24.04 [GLIBC2.38]${NC}"
 			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
@@ -111,49 +107,63 @@ toolchain() {
 		fi
 		echo ""
 		echo -e "${GREEN}Proceed to Download the Toolchain?${NC}\n"
-		select toolchain in "Yes" "Exit"; do
-			case $toolchain in
-			"Yes")
-				if [[ "$DISTRO" == "Ubuntu 24.04 LTS" ]]; then
-					echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
-					mkdir -p "$HOME/toolchains/neutron-clang"
-					cd "$HOME/toolchains/neutron-clang"
-					bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
-					cd "$SRCTREE"
-					cp -r "$HOME/toolchains/neutron-clang" toolchain
-					clear
-					select_device
-				elif [[ "$DISTRO" == "Ubuntu 23.10" ]]; then
-					echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
-					mkdir -p "$HOME/toolchains/neutron-clang"
-					cd "$HOME/toolchains/neutron-clang"
-					bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
-					cd "$SRCTREE"
-					cp -r "$HOME/toolchains/neutron-clang" toolchain
-					clear
-					select_device
-				elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
-					echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
-					git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
-					clear
-					select_device
-				elif [[ "$DISTRO" == "Ubuntu 20.04.6 LTS" ]]; then
-					echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
-					git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
-					clear
-					select_device
-				fi
-				;;
-			"Exit")
+		printf "${GREEN}Hint: Type Yes or No after '>>>'.${NC}\n"
+		printf ">>> "
+		read -r ans
+		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
+		while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
+			printf "Please answer 'yes' or 'no':'\\n"
+			printf ">>> "
+			read -r ans
+			ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
+		done
+		if [ "$ans" = "YES" ]; then
+			case "$DISTRO" in
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04")
+				echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
+				mkdir -p "$HOME/toolchains/neutron-clang"
+				cd "$HOME/toolchains/neutron-clang" || exit
+				bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
+				cd "$SRCTREE" || exit
+				cp -r "$HOME/toolchains/neutron-clang" toolchain
 				clear
-				echo -e "${RED}Exiting ...${NC}\n"
-				exit
+				select_device
+				;;
+			"Ubuntu 21.10")
+				echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
+				git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
+				clear
+				select_device
+				;;
+			"Ubuntu 20.04.6 LTS")
+				echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
+				git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
+				clear
+				select_device
 				;;
 			*)
-				echo -e "${RED}Invalid option. Please select again.${NC}\n"
+				echo "Unsupported DISTRO: $DISTRO"
 				;;
 			esac
-		done
+		elif [[ "$ans" == "NO" ]]; then
+			clear
+			case "$DISTRO" in
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04")
+				echo -e "${YELLOW}Skipping download for Neutron-Clang Toolchain ...${NC}\n"
+				;;
+			"Ubuntu 21.10")
+				echo -e "${YELLOW}Skipping download for Vortex-Clang Toolchain ...${NC}\n"
+				;;
+			"Ubuntu 20.04.6 LTS")
+				echo -e "${YELLOW}Skipping download for Proton-Clang Toolchain ...${NC}\n"
+				;;
+			*)
+				echo "Unsupported DISTRO: $DISTRO"
+				;;
+			esac
+		else
+			echo "Invalid answer: $ans"
+		fi
 	fi
 }
 
@@ -191,12 +201,10 @@ select_device() {
 
 build_kernel() {
 	clear
-	echo -e "${YELLOW}"
-	echo "Compile Kernel, please wait ..."
-	echo ""
-	echo "Note that u see only a blinking / freezed Cursor but the script is running."
-	echo "Troubleshoot: if u feal that the script takes to long, press ctl-c and check compile.log"
-	echo ""
+	echo -e "${YELLOW}Note that u see only a blinking / freezed Cursor but the script is running.\n"
+	echo -e "Troubleshoot: if u feel that the script takes to long, press CTRL-C and check compile.log in ${SRCTREE}\n"
+	echo -n -e "Compile Kernel, please wait ... "
+	echo -n -e "\033[?25h"
 	PATH=$TOOLCHAIN:$PATH \
 		make O=out -j$(nproc --all) \
 		ARCH=arm64 \
@@ -206,7 +214,7 @@ build_kernel() {
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
 		CROSS_COMPILE=$CROSS \
-		CROSS_COMPILE_ARM32=$CROSS_ARM32 &> compile.log
+		CROSS_COMPILE_ARM32=$CROSS_ARM32 &>compile.log
 	echo -e "${NC}"
 	clear
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
@@ -225,7 +233,7 @@ create_zip() {
 	fi
 	sed -i "s/Kernel: .*$/Kernel: $VERSION.$PATCHLEVEL.$SUBLEVEL/g" "version"
 	sed -i "s/Build Date: .*/Build Date: $(date +'%Y-%m-%d %H:%M %Z')/g" "version"
-	ZIP_FILENAME="Nameless_${codename}_v1.zip"
+	ZIP_FILENAME="Nameless_${codename}_v1-debug.zip"
 	zip -r9 "$ZIP_FILENAME" "$@"
 }
 
@@ -240,39 +248,40 @@ pack() {
 	elif [ "$codename" = "jackpotlte" ]; then
 		create_zip META-INF tools anykernel.sh Image dtb.img version
 	fi
+	cp $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME $SRCTREE/kernel_zip/
 	cd $SRCTREE
 	clear
-	echo -e "${GREEN}Zip file created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/anykernel/${NC}\n"
+	echo -e "${RED}Debug${GREEN} ZIP created: $ZIP_FILENAME and saved in $SRCTREE/kernel_zip/${NC}\n"
 	echo -e "${GREEN}***************************************************"
 	echo "	          Kernel: $VERSION.$PATCHLEVEL.$SUBLEVEL"
 	echo "          Build Date: $(date +'%Y-%m-%d %H:%M %Z')"
 	echo -e "***************************************************${NC}\n"
-	echo -e "${GREEN}Upload to Telegram?${NC}\n"
 	tg_upload
 }
 
 tg_upload() {
-	select telegram in "Yes" "No"; do
-		case "$telegram" in
-		"Yes")
-			echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME to Telegram ...${NC}"
-			file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
-			curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Uploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB%0ABuild Date: $(date +'%Y-%m-%d %H:%M %Z')"
-			curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
-			clear
-			break
-			;;
-		"No")
-			clear
-			echo -e "${RED}Telegram Upload skipped. Exiting ...${NC}\n"
-			echo -e "${GREEN}ZIP Output: $SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}${NC}\n"
-			exit
-			;;
-		*)
-			echo -e "${RED}Invalid option. Please select again.${NC}\n"
-			;;
-		esac
+	echo -e "${GREEN}Upload to Telegram?${NC}\n"
+	printf "${GREEN}Hint: Type Yes or No after '>>>'.${NC}\n"
+	printf ">>> "
+	read -r ans
+	ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
+	while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
+		printf "Please answer 'yes' or 'no':'\\n"
+		printf ">>> "
+		read -r ans
+		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
 	done
+	if [ "$ans" = "YES" ]; then
+		echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/anykernel/$ZIP_FILENAME to Telegram ...${NC}"
+		file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
+		curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Uploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB%0ABuild Date: $(date +'%Y-%m-%d %H:%M:%S')"
+		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
+		clear
+	elif [ "$ans" = "NO" ]; then
+		clear
+		echo -e "${RED}Telegram Upload skipped. Exiting ...${NC}\n"
+		echo -e "${GREEN}ZIP Output: $SRCTREE/kernel_zip/anykernel/${ZIP_FILENAME}${NC}\n"
+	fi
 }
 
 init
