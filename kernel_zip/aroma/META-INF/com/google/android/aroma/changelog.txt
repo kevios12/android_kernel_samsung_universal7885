@@ -1,0 +1,35 @@
+V1 Changelog:
+################
+→ Upstreamed (4.4.302)
+→ Unified Source (A40 + A8 2018) based on latest SM-A405FN_EUR_RR_Opensource
+→ Built with latest ZyCromerZ Clang19 
+→ latest KernelSU
+→ BPF Patched to boot Android 14
+→ Headphone Jack seperated to work on both OS (CONFIG_JACK)
+→ A40: DT2W (OS Detection via CONFIG_SAMSUNG_MTP)
+→ CPU: 
+ → Stock Clockspeed
+ → Governor: Ondemand by Default with extra HMP code (inspired from S8 thx to Ace2Nuter) 
+→ GPU Mali R26P0:
+ → A8 2018 use now this Driver by Default
+ → min clockspeed: 450Mhz
+ → max clockspeed: 1100Mhz (1,1Ghz)
+ → Governor: Ondemand
+ → Adaptive Powerpolicy
+→ F2FS synced with latest 4.4.y
+→ Disabled Logging/Debug/Tracing stuff
+→ Backported new vmalloc (Performance)
+→ QOS/Suspend/Powermanagment upstreamed 
+ → DeepSleep works accurate, drain should be less in it
+→ Introduce CPU Input Booster (Event based, inspired from 4.14) 
+→ Introduce DEVFREQ_BOOST (adapted from 4.14 to 4.4-7885)
+→ Decreased Max Brightness (A40 > AOSP - Max Brightness, looks ugly)
+→ Compatible OS version: Android 11(R) - Android 14(U)
+→ Compatible ROM's: AOSP (Eureka) + OneUI all version (AIO)
+→ removed AVB,VERITY Flag from DTS
+→ Adjust input_boost,kfc_freq in DTS
+→ Allow Display to use 167Mhz
+→ Disabled unnecessary HID devices
+→ Lowering hotplug threshold -10
+→ set HMP values to Performance by Default (can be changed in HKTweaks)
+→ and maybe more ...

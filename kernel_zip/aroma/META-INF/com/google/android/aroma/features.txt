@@ -1,0 +1,11 @@
+Features v1:
+-------------------------------
+→ Upstreamed to latest 4.4.302
+→ Unified Source (A40 + A8 2018) based on latest SM-A405FN_EUR_RR_Opensource
+→ Built with latest ZyCromerZ Clang19 
+→ latest KernelSU
+→ Till Android 14 compatible
+→ DT2W / DeepSleep
+→ Stock CPU Clockspeed
+→ BIG.LITTLE CPU Scheduler: new indroduced Ondemand governor for better Stability and Responsivness
+→ Compatible with all ROM's (OneUI3 > OneUI6) / Eureka ROM's (AOSP Android ??11?? > Android 14)

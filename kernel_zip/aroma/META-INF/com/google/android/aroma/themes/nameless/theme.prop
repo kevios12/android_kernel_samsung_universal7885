@@ -1,0 +1,67 @@
+img.background=bg
+img.titlebar=titlebar.9
+img.navbar=navbar.9
+img.dialog=dialog.9
+img.dialog.titlebar=dialog_titlebar.9
+img.progress=button.9
+img.prograss.fill=button_press.9
+img.selection=list.9
+img.selection.push=list.9
+img.button=button.9
+img.button.focus=button_focus.9
+img.button.push=button_press.9
+img.checkbox=cb
+img.checkbox.focus=cb_focus
+img.checkbox.push=cb_press
+img.checkbox.on=cb_on
+img.checkbox.on.focus=cb_on_focus
+img.checkbox.on.push=cb_on_press
+img.radio=radio
+img.radio.focus=radio_focus
+img.radio.push=radio_press
+img.radio.on=radio_on
+img.radio.on.focus=radio_on_focus
+img.radio.on.push=radio_on_press
+
+
+color.winbg           = #000
+color.winbg_g         = #444
+color.winfg           = #fff
+color.winfg_gray      = #fff
+color.dialogbg        = #000
+color.dialogbg_g      = #444
+color.dialogfg        = #fff
+color.textbg          = #000
+color.textfg          = #fff
+color.textfg_gray     = #fff
+color.controlbg       = #fff
+color.controlbg_g     = #fff
+color.controlfg       = #fff
+color.selectbg        = #fff
+color.selectbg_g      = #fff
+color.selectfg        = #fff
+color.titlebg         = #fabc05
+color.titlebg_g       = #fabc05
+color.titlefg         = #fff
+color.dlgtitlebg      = #fff
+color.dlgtitlebg_g    = #fff
+color.dlgtitlefg      = #fff
+color.scrollbar       = #fff
+color.navbg           = #000
+color.navbg_g         = #000
+color.border          = #666
+color.border_g        = #666
+color.progressglow    = #fff
+
+config.roundsize             = 2
+config.button_roundsize      = 2
+config.window_roundsize      = 2
+config.transition_frame      = 9
+
+font.small                   = font.roboto.small
+font.big                     = font.roboto.big
+
+
+info.themename        = Nameless
+info.description      = Nameless Kernel Theme for AROMA Installer
+info.author           = By Kevios12

@@ -1,0 +1,232 @@
+﻿### LICENSE:
+#
+# Copyright (C) 2011 Ahmad Amarullah ( http://amarullz.com/ )
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+### FILE INFO:
+#
+# AROMA Installer 2.70 - AROMA Installer Test Script Configuration
+#       (c) 2011-2012 by Ahmad Amarullah
+#           amarullz - xda-developers
+#           http://www.amarullz.com/
+#
+#       Binary Version  : 3.00
+#       Binary Codename : Flamboyan
+#
+
+##
+# Initializing Informations
+#
+ini_set("force_colorspace", "rgba");
+
+ini_set("rom_name",    "Nameless Kernel");
+ini_set("rom_version", "V1");
+ini_set("rom_author",  "Nameless Team");
+ini_set("rom_device",  "Samsung Galaxy A40 / A8 2018");
+ini_set("rom_date",    "NULL");
+
+#
+# Show Simple Splash for 2 seconds
+#
+splash(2000, "logo");
+
+#
+# Show Animated Splash
+#
+# anisplash(4, "splash/a1", 500, "splash/a2", 30, "splash/a3", 30, "splash/a4", 30, "splash/a5", 30, "splash/a6", 30);
+
+#
+# Set Small Font to Support all fonts
+#
+fontresload( "0", "ttf/Roboto-Regular.ttf;", "13" );
+fontresload( "1", "ttf/Roboto-Regular.ttf;", "16" );
+
+#
+# Set theme
+#
+theme("nameless");
+
+#
+# Main
+#
+ini_set("text_next", "Next");
+ini_set("icon_next", "@next");
+viewbox(
+"",
+"\n\n"+
+"<b><#selectbg_g> Information about Nameless Kernel</#></b>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"+
+"<b>Kernel Name  \t\t: <#selectbg_g>Nameless Kernel</#></b>\n\n"+
+"<b>Kernel Version \t\t: <#selectbg_g>V1</#></b>\n\n"+
+"<b>Kernel Release \t: <#selectbg_g>2024/06/06</#></b>\n\n"+
+"<b>Kernel Devs \t\t: <#selectbg_g>Nameless Team</#></b>\n\n"+
+"<b>Booted Device \t\t: <#selectbg_g>"+sysprop("ro.product.model")+"</#></b>\n\n\n\n\n\n\n\n\n\n\n"+
+"\t<b>Click on Next to Proceed</b>",
+"@welcome"
+);
+
+#
+# MAIN MENU- INSTALLER
+#
+# Change the Next button text to "none"
+ini_set("text_next", " ");
+ini_set("icon_next", "@none");
+menubox(
+  #-- Title
+    "",
+  
+  #-- Sub Title
+    "\n<b>Welcome to Nameless AROMA Installer</b>",
+  
+  #-- Icon
+    "@welcome",
+  
+  #-- Will be saved in /tmp/aroma/menu.prop
+    "menu.prop",
+
+     #-------------------------+-----------------[ Menubox Items ]-------------------------+---------------#
+     # TITLE                   |  SUBTITLE                                                 |   Item Icons  #
+     #-------------------------+-----------------------------------------------------------+---------------#  
+  
+    "Installation",       "Let's Install me!",               "@customize",      #-- selected.0 = 1
+    "Changelog",          "Full Changelog of Nameless Kernel",                "@license",      #-- selected.0 = 2
+    "Feature list",       "View all features from Nameless Kernel",       "@license",      #-- selected.0 = 3
+    "Reboot",             "Reboot into OS",                        "@reboot"        #-- selected.0 = 4
+
+);
+
+#
+# Custom installation
+#
+if (prop("menu.prop","selected")=="1") then
+	  writetmpfile(
+	    "kernel.prop",
+	    
+	    "selected.1=0\n"+
+	    "selected.2=0\n"
+	    );
+		
+	  	ini_set("text_next", "Next");
+		ini_set("icon_next", "@next");
+		
+		agreebox(
+		#-- Title
+		  "",
+  
+		#-- Subtitle / Description
+		  "\n<b>Nameless License / Note Agreement</b>",
+  
+		#-- Icon
+		  "@welcome",
+  
+		#-- Text Content ( Read from <AROMA Resource Dir>/license.txt )
+		  resread("license.txt"),
+  
+		#-- Checkbox Text
+		  "<b>I Accept it!</b>",
+  
+		#-- Unchecked Alert Message
+		  "<b>He He, did u forgot something?</b>"
+		);	    
+
+		alert("<b>AROMA INSTALLER 3.00</b>", "<b>Booting Kernel on GSI (Generic System Image) is not guaranteed and tested!</b>", "@alert");
+	    ini_set("text_next", "Start Install");
+	    ini_set("icon_next", "@installbutton");
+	    #-- IF Installation type = "Custom" Show Customize Selection
+	    selectbox(
+	      "",
+	      "<b>\t  Please select your Kernel.</b>",
+	      "@welcome",
+	      "customize.prop",
+
+	      #------------------------------+---------------[ Selectbox With Groups ]-------------+--------------------------------#
+	      #             TITLE            |                       SUBTITLE                      |         Initial Value          #
+	      #------------------------------+-----------------------------------------------------+--------------------------------#
+	       "<b>Kernel Variant (GSI = Generic System Image)</b>",   "",             2,  #-- Group 1. key = "selected.1"
+	        " <b>AOSP</b>",         " For EK ROM newer then Feb.22 and maybe GSI",  0,  #-- selected.1 = 1
+	        " <b>OneUI</b>",          " For OneUI or GSI",                        0,  #-- selected.1 = 2
+	       "<b>SELinux (Security)</b>", "",                                                 2,  #-- Group 2. key = "selected.2"
+            " <b>Enforcing</b>",                   " Recommended for security.",                           0,  #-- selected.2 = 1
+            " <b>Permissive</b>",                  " Can Boot Roms which doesn't boot with\n enforcing.",   0  #-- selected.2 = 2
+
+    	);
+
+	# Change the Install Now button text back to "Next"
+	ini_set("text_next", "Next");
+	ini_set("icon_next", "@next");
+
+endif;
+
+#
+# CHANGELOG
+#
+if (prop("menu.prop","selected")=="2") then
+ textdialog("Nameless Changelog", resread("changelog.txt"), "Close");
+  #-- Back to Menu
+  back("1");
+endif;
+
+#
+# FEATURE LIST
+#
+if (prop("menu.prop","selected")=="3") then
+ textdialog("Nameless Features", resread("features.txt"), "Close");
+  #-- Back to Menu
+  back("1");
+endif;
+
+#
+# Reboot
+#
+if (prop("menu.prop","selected")=="4") then
+  if
+    confirm(
+      "Reboot",
+      "<b>Are you sure you want to reboot?</b>",
+      "@alert"
+    )=="yes"
+  then
+    reboot("now");
+  else
+    back("1");
+  endif;
+endif;
+
+#
+# Goes to installation process
+#
+  ini_set("text_next", "Exit");
+  ini_set("icon_next", "@exit");
+setvar("retstatus",
+install(
+"",
+"<@center><b>\n\nFlashing ... PLEASE WAIT ...</b></@>",
+"@install",
+"<@center><b>\n\nNameless Kernel Install complete!</b></@>"
+)
+);
+textdialog("<b>See you again!</b>", resread("finish.txt"), "<b>OK</b>");
+if
+    confirm(
+      "Reboot",
+      "<b>Do you want to reboot?</b>",
+      "@alert"
+    )=="yes"
+  then
+    reboot("now");
+  else
+    exit("");
+endif;
+
+
+#---- FINISH

@@ -1,0 +1,43 @@
+set_progress(0.1);
+package_extract_dir("kernel", "/tmp/kernel");
+package_extract_dir("tools", "/tmp/tools");
+
+set_perm_recursive(0, 0, 0755, 0755, "/tmp/tools");
+
+###### INSTALLATION MENU
+if file_getprop("/tmp/aroma/customize.prop", "selected.1") == "1" then
+    set_progress(0.2);
+	if file_getprop("/tmp/aroma/customize.prop", "selected.2") == "1" then
+        ui_print(" ");
+		set_progress(0.5);
+        run_program("/tmp/tools/busybox", "sh", "/tmp/kernel/update-binary", "dummy", "1", "/tmp/kernel/enforce/aosp.zip"); 
+	endif;
+	if file_getprop("/tmp/aroma/customize.prop", "selected.2") == "2" then
+        ui_print(" ");
+		set_progress(0.5);
+        run_program("/tmp/tools/busybox", "sh", "/tmp/kernel/update-binary", "dummy", "1", "/tmp/kernel/permissive/aosp.zip"); 
+	endif;
+	set_progress(0.7);
+endif;
+
+if file_getprop("/tmp/aroma/customize.prop", "selected.1") == "2" then
+    set_progress(0.3);
+	if file_getprop("/tmp/aroma/customize.prop", "selected.2") == "1" then
+        ui_print(" ");
+		set_progress(0.5);
+        run_program("/tmp/tools/busybox", "sh", "/tmp/kernel/update-binary", "dummy", "1", "/tmp/kernel/enforce/oneui.zip"); 
+	endif;
+	if file_getprop("/tmp/aroma/customize.prop", "selected.2") == "2" then
+        ui_print(" ");
+		set_progress(0.5);
+        run_program("/tmp/tools/busybox", "sh", "/tmp/kernel/update-binary", "dummy", "1", "/tmp/kernel/permissive/oneui.zip"); 
+	endif;
+	set_progress(0.7);
+endif;
+###### END OF INSTALLATION MENU
+
+delete_recursive("/tmp/kernel");
+delete_recursive("/tmp/tools");
+set_progress(1.0);
+ui_print(" ");
+ui_print("- Installation completed.");
