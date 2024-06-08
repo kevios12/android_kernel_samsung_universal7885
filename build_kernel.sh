@@ -68,6 +68,37 @@ init() {
 	fi
 }
 
+glibc_patch() {
+	# GLIBC-Patching
+	echo -e "${RED}Downloading patchelf binary from NixOS repos...${NC}\n"
+	mkdir -p "${HOME}"/.neutron-tc/patchelf-temp
+	wget -qO- https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz | bsdtar -C "${HOME}"/.neutron-tc/patchelf-temp -xf -
+	mv "${HOME}"/.neutron-tc/patchelf-temp/bin/patchelf "${HOME}"/.neutron-tc/
+	rm -rf "${HOME}"/.neutron-tc/patchelf-temp
+	mkdir "${HOME}"/.neutron-tc/glibc &>/dev/null || (rm -rf "${HOME}"/.neutron-tc/glibc && mkdir "${HOME}"/.neutron-tc/glibc)
+	echo -e "${RED}Downloading latest libs from ArchLinux repos...${NC}\n"
+	wget -qO- https://archlinux.org/packages/core/x86_64/glibc/download | bsdtar -C "${HOME}"/.neutron-tc/glibc -xf -
+	wget -qO- https://archlinux.org/packages/core/x86_64/lib32-glibc/download | bsdtar -C "${HOME}"/.neutron-tc/glibc -xf -
+	wget -qO- https://archlinux.org/packages/core/x86_64/gcc-libs/download | bsdtar -C "${HOME}"/.neutron-tc/glibc -xf -
+	wget -qO- https://archlinux.org/packages/core/x86_64/lib32-gcc-libs/download | bsdtar -C "${HOME}"/.neutron-tc/glibc -xf -
+	ln -svf "${HOME}"/.neutron-tc/glibc/usr/lib "${HOME}"/.neutron-tc/glibc/usr/lib64
+	echo -e "${RED}Patching libs...${NC}\n"
+	for bin in $(find "${HOME}"/.neutron-tc/glibc -type f -exec file {} \; | grep 'ELF .* interpreter' | awk '{print $1}'); do
+		bin="${bin::-1}"
+		echo "Patching: ${bin}"
+		"${HOME}"/.neutron-tc/patchelf --set-rpath "${HOME}"/.neutron-tc/glibc/usr/lib --force-rpath --set-interpreter "${HOME}"/.neutron-tc/glibc/usr/lib/ld-linux-x86-64.so.2 "${bin}"
+	done
+	echo -e "${RED}Patching Toolchain...${NC}\n"
+	for bin in $(find "${WORK_DIR}" -type f -exec file {} \; | grep 'ELF .* interpreter' | awk '{print $1}'); do
+		bin="${bin::-1}"
+		echo "Patching: ${bin}"
+		"${HOME}"/.neutron-tc/patchelf --add-rpath "${HOME}"/.neutron-tc/glibc/usr/lib --force-rpath --set-interpreter "${HOME}"/.neutron-tc/glibc/usr/lib/ld-linux-x86-64.so.2 "${bin}"
+	done
+	echo -e "${YELLOW}Cleaning...${NC}\n"
+	rm -rf "${HOME}"/.neutron-tc/patchelf
+	echo -e "${GREEN}Done${NC}\n"
+}
+
 # Let's do a Toolchain check
 toolchain() {
 	clear
@@ -96,8 +127,9 @@ toolchain() {
 	else
 		echo -e "${RED}No Toolchain found!${NC}\n"
 		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}\n"
+		echo -e "${RED}Warning for Neutron Toolchain! Before type 'yes', make sure that u have 'libarchive-tools' installed else it will fail to patch your GLIBC!"
 		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}\n"
-		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}"
+		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}\n"
 		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" || "$DISTRO" == "Ubuntu 23.10" || "$DISTRO" == "Ubuntu 22.04.4 LTS" ]]; then
 			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 24.04 LTS | Ubuntu 23.10 | Ubuntu 22.04.4 LTS [GLIBC2.38]${NC}"
 			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
@@ -126,10 +158,13 @@ toolchain() {
 		if [ "$ans" = "YES" ]; then
 			case "$DISTRO" in
 			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS")
-				echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
 				mkdir -p "$HOME/toolchains/neutron-clang"
-				cd "$HOME/toolchains/neutron-clang" || exit
-				bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
+				cd "$HOME/toolchains/neutron-clang"
+				echo -e "${RED}Downloading Neutron-Clang 18 ...${NC}\n"
+				wget https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/05012024/neutron-clang-05012024.tar.zst -q --show-progress
+				echo -e "${RED}Extracting tar...${NC}\n"
+				tar -I zstd -xf "neutron-clang-05012024.tar.zst"
+				glibc_patch
 				cd "$SRCTREE" || exit
 				cp -r "$HOME/toolchains/neutron-clang" toolchain
 				clear
@@ -155,7 +190,7 @@ toolchain() {
 			clear
 			case "$DISTRO" in
 			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS")
-				echo -e "${YELLOW}Skipping download for Neutron-Clang Toolchain ...${NC}\n"
+				echo -e "${YELLOW}Skipping download for Neutron-Clang 18 Toolchain ...${NC}\n"
 				;;
 			"Ubuntu 21.10")
 				echo -e "${YELLOW}Skipping download for Vortex-Clang Toolchain ...${NC}\n"
