@@ -98,12 +98,8 @@ toolchain() {
 		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}\n"
 		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}\n"
 		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}"
-		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" ]]; then
-			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 23.10/24.04 [GLIBC2.38]${NC}"
-			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
-			echo -e "${YELLOW}Proton needs ${RED}Ubuntu 20.04 [GLIBC2.31]${NC}"
-		elif [[ "$DISTRO" == "Ubuntu 23.10" ]]; then
-			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 23.10 [GLIBC2.38]${NC}"
+		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" || "$DISTRO" == "Ubuntu 23.10" || "$DISTRO" == "Ubuntu 22.04.4 LTS" ]]; then
+			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 24.04 LTS | Ubuntu 23.10 | Ubuntu 22.04.4 LTS [GLIBC2.38]${NC}"
 			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
 			echo -e "${YELLOW}Proton needs ${RED}Ubuntu 20.04 [GLIBC2.31]${NC}"
 		elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
@@ -129,7 +125,7 @@ toolchain() {
 		done
 		if [ "$ans" = "YES" ]; then
 			case "$DISTRO" in
-			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04")
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS")
 				echo -e "${YELLOW}Downloading Neutron-Clang Toolchain ...${NC}\n"
 				mkdir -p "$HOME/toolchains/neutron-clang"
 				cd "$HOME/toolchains/neutron-clang" || exit
@@ -158,7 +154,7 @@ toolchain() {
 		elif [[ "$ans" == "NO" ]]; then
 			clear
 			case "$DISTRO" in
-			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04")
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS")
 				echo -e "${YELLOW}Skipping download for Neutron-Clang Toolchain ...${NC}\n"
 				;;
 			"Ubuntu 21.10")
