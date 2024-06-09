@@ -48,6 +48,13 @@ init() {
 		echo -e "${YELLOW}Warning: Your BOT Token or Chat ID is Empty!${NC}\n"
 		sleep 2
 	fi
+	if [ -d $SRCTREE/kernel_zip/aroma/kernel/enforce ] || [ -d $SRCTREE/kernel_zip/aroma/kernel/permissive ]; then
+		sleep 1
+	else
+		mkdir $SRCTREE/kernel_zip/aroma/kernel/enforce
+		mkdir $SRCTREE/kernel_zip/aroma/kernel/permissive
+		sleep 1
+	fi
 	echo -e "${YELLOW}Syncing Git Submodule [KernelSU]${NC}\n"
 	git submodule init && git submodule update
 	sleep 1
@@ -309,14 +316,14 @@ select_device() {
 }
 
 python3_2() {
-        if [ "$codename" = "a40" ]; then
-                echo -e "${RED}Revert back to Python3 DTB/DTBO Build${NC}\n"
-                git reset HEAD~1
-                git restore scripts
-                sleep 2
+	if [ "$codename" = "a40" ]; then
+		echo -e "${RED}Revert back to Python3 DTB/DTBO Build${NC}\n"
+		git reset HEAD~1
+		git restore scripts
+		sleep 2
 	elif [ "$codename" = "jackpotlte" ]; then
 		echo -e "${RED}Unsupported!${NC}"
-        fi
+	fi
 }
 
 compile_text() {
