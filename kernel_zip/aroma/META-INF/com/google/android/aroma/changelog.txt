@@ -1,3 +1,20 @@
+V1.5 Changelog:
+################
+**Nameless Installer**
+→ New Builds comes now with our own AROMA Installer
+→ Selection between AOSP/ONEUI - ENFORCING/PERMISSIVE 
+→ New UI fitting to Nameless
+
+**Kernel**
+→ fix: 3,5mm Jack was incorrect by OS (Galaxy A40)
+→ fix: Singe Tap on AOD (Galaxy A8 2018 (Jackpotlte only))
+→ fix: WiFi Hotspot - Tethering (switch for AOSP to SCSC AP Interface: wlan1, currently Galaxy A40 - Eureka ROM's)
+→ fix: seperate lowered max brightness between OneUI and AOSP - on OneUI 4.x cause it, that the Outdoor mode not worked properly
+→ switch to Python3 mkdtbimg from AOSP Source (Galaxy A8 2018 (Jackpotlte only)) - since its broken for A40 it will be still build with Python2. Just revert the commit: "`7bce8872f589a1a61acc9dffc902f894fa973fbb`"
+
+**Internal**
+→ Update our Buildscript to Support different OS selection with single package build or full AROMA package. Fixup also Neutron-Clang18 cloning (supports glibc patching as well)
+
 V1 Changelog:
 ################
 → Upstreamed (4.4.302)

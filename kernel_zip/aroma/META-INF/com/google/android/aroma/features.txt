@@ -1,4 +1,4 @@
-Features v1:
+Nameless Features:
 -------------------------------
 → Upstreamed to latest 4.4.302
 → Unified Source (A40 + A8 2018) based on latest SM-A405FN_EUR_RR_Opensource
@@ -9,3 +9,4 @@ Features v1:
 → Stock CPU Clockspeed
 → BIG.LITTLE CPU Scheduler: new indroduced Ondemand governor for better Stability and Responsivness
 → Compatible with all ROM's (OneUI3 > OneUI6) / Eureka ROM's (AOSP Android ??11?? > Android 14)
+→ AROMA Installer
