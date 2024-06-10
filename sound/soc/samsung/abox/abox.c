@@ -405,7 +405,7 @@ static void abox_process_ipc(struct work_struct *work)
 		dev_dbg(dev, "%s(%d, %zu)\n", __func__, hw_irq, size);
 
 		*state = SEND_MSG;
-		memcpy(tx_sram_base, supplement, size);
+		memcpy_toio(tx_sram_base, supplement, size);
 		abox_gic_generate_interrupt(data->pdev_gic, hw_irq);
 		result = wait_event_timeout(data->ipc_wait_queue,
 				(*state == SEND_MSG_OK ||
@@ -4984,7 +4984,7 @@ static void abox_reload_extra_firmware(struct abox_data *data, const char *name)
 			memcpy_toio(base + ext_fw->offset, ext_fw->firmware->data,
 					ext_fw->firmware->size);
 		else
-			memcpy(base + ext_fw->offset, ext_fw->firmware->data,
+			memcpy_toio(base + ext_fw->offset, ext_fw->firmware->data,
 					ext_fw->firmware->size);
 		dev_info(dev, "%s: %s is downloaded at area %u offset %u\n",
 				__func__, ext_fw->name, ext_fw->area,
@@ -5092,7 +5092,7 @@ static void abox_download_extra_firmware(struct abox_data *data)
 			memcpy_toio(base + ext_fw->offset, ext_fw->firmware->data,
 					ext_fw->firmware->size);
 		else
-			memcpy(base + ext_fw->offset, ext_fw->firmware->data,
+			memcpy_toio(base + ext_fw->offset, ext_fw->firmware->data,
 					ext_fw->firmware->size);
 		dev_info(dev, "%s: %s is downloaded at area %u offset %u\n",
 				__func__, ext_fw->name, ext_fw->area,
