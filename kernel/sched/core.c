@@ -1190,7 +1190,7 @@ static const struct cpumask *get_adjusted_cpumask(const struct task_struct *p,
 	const struct cpumask *req_mask)
 {
 	/* Force all performance-critical kthreads onto the big cluster */
-	if (p->flags & PF_PERF_CRITICAL)
+	if (p->flags & PC_PERF_AFFINE)
 		return cpu_perf_mask;
 
 	/* Force all trivial, unbound kthreads onto the little cluster */
