@@ -1006,13 +1006,8 @@ static unsigned int s3c24xx_serial_getclk(struct s3c24xx_uart_port *ourport,
 		if (ourport->dbg_mode & UART_DBG_MODE)
 			printk(" - Clock rate : %ld\n", rate);
 
-		rate = clk_get_rate(clk);
-		if (!rate) {
-			dev_err(ourport->port.dev,
-				"Failed to get clock rate for %s.\n", clkname);
-			clk_put(clk);
+		if (!rate)
 			continue;
-		}
 
 		if (ourport->info->has_divslot) {
 			unsigned long div = rate / req_baud;
