@@ -112,11 +112,18 @@ endif
 
 KBUILD_DTBS	:= dtbs
 
-KBUILD_DTBO_IMG := dtbo.img
-
+ifeq ($(CONFIG_MACH_EXYNOS7885_A40_GLOBAL),y)
 KBUILD_DTBS	+= dtb.img
+KBUILD_DTBO_IMG := dtbo.img
+endif
 
-all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
+ifeq ($(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_EUR_OPEN),y)
+KBUILD_DTBS	+= dtb.img
+else ifeq ($(CONFIG_MACH_EXYNOS7885_JACKPOT2LTE_EUR_OPE),y)
+KBUILD_DTBS	+= dtb.img
+endif
+
+all:	$(KBUILD_IMAGE) $(KBUILD_DTBS) $(KBUILD_DTBO_IMG)
 
 boot := arch/arm64/boot
 
@@ -135,7 +142,7 @@ zinstall install: vmlinux
 %.dtbo: scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts $(boot)/dts/$@
 
-PHONY += dtbs dtbs_install dtb.img
+PHONY += dtbs dtbs_install dtb.img dtbo.img
 
 dtbs: prepare scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts
@@ -152,10 +159,8 @@ Image-dtb Image.gz-dtb: vmlinux scripts dtbs
 $(KBUILD_DTB_IMG): dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
-$(KBUILD_DTBO_IMG): dtbs
+dtbo.img: prepare scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
-
-all: $(KBUILD_DTBO_IMG) $(KBUILD_DTB_IMG)
 
 PHONY += vdso_install
 vdso_install:

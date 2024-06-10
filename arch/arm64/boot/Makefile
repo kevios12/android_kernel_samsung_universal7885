@@ -16,7 +16,7 @@
 
 include $(srctree)/arch/arm64/boot/dts/Makefile
 
-targets := Image Image.gz dtbo.img dtb.img
+targets := Image Image.gz
 
 DTB_OBJS := $(shell find $(obj)/dts/ -name \*.dtb)
 DTBO_OBJS := $(shell find $(obj)/dts/ -name \*.dtbo)
@@ -45,11 +45,27 @@ $(obj)/Image.lzo: $(obj)/Image FORCE
 $(obj)/Image.gz-dtb: $(obj)/Image.gz $(DTB_OBJS) FORCE
 	$(call if_changed,cat)
 
-$(obj)/dtbo.img: $(DTBO_OBJS) FORCE
-	$(call if_changed,mkdtimg)
+ifeq ($(CONFIG_MACH_EXYNOS7885_A40_GLOBAL),y)
+targets += dtb.img dtbo.img
 
 $(obj)/dtb.img: $(DTB_OBJS) FORCE
 	$(call if_changed,mkdtimg)
+
+$(obj)/dtbo.img: $(DTBO_OBJS) FORCE
+	$(call if_changed,mkdtimg)
+endif
+
+ifeq ($(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_EUR_OPEN),y)
+targets += dtb.img
+$(obj)/dtb.img: $(DTB_OBJS) FORCE
+	$(call if_changed,dtbtool_exynos)
+endif
+
+ifeq ($(CONFIG_MACH_EXYNOS7885_JACKPOT2LTE_EUR_OPEN),y)
+targets += dtb.img
+$(obj)/dtb.img: $(DTB_OBJS) FORCE
+        $(call if_changed,dtbtool_exynos)
+endif
 
 install: $(obj)/Image
 	$(CONFIG_SHELL) $(srctree)/$(src)/install.sh $(KERNELRELEASE) \
