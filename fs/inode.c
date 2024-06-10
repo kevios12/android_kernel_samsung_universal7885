@@ -156,7 +156,8 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
 	inode->dirtied_when = 0;
 
 	if (security_inode_alloc(inode))
-		goto out;
+		return -ENOMEM;
+
 	spin_lock_init(&inode->i_lock);
 	lockdep_set_class(&inode->i_lock, &sb->s_type->i_lock_key);
 
