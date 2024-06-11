@@ -216,7 +216,7 @@ select_device() {
 		"Galaxy A40 (a40)")
 			clear
 			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			#git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb
+			git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb
 			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
@@ -318,8 +318,8 @@ select_device() {
 python3_2() {
 	if [ "$codename" = "a40" ]; then
 		echo -e "${RED}Revert back to Python3 DTB/DTBO Build${NC}\n"
-		#git reset HEAD~1
-		#git restore scripts
+		git reset HEAD~1
+		git restore scripts
 		sleep 2
 	elif [ "$codename" = "jackpotlte" ]; then
 		echo -e "${RED}Unsupported!${NC}"
