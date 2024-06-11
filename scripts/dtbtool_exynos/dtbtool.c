@@ -154,7 +154,7 @@ next_f:
 
 static void *load_dtbh_block(char **dtb_files, unsigned pagesize,
 			     uint32_t platform_code, uint32_t subtype_code,
-			     unsigned *_sz, char* model)
+			     unsigned *_sz)
 {
 	const unsigned pagemask = pagesize - 1;
 	struct dt_entry *new_entries;
@@ -170,7 +170,6 @@ static void *load_dtbh_block(char **dtb_files, unsigned pagesize,
 	unsigned hdr_sz = DT_HEADER_PHYS_SIZE;
 	uint32_t version = DTBH_VERSION;
 	unsigned blob_sz = 0;
-	const char *prop_model;
 	const unsigned *prop_chip;
 	const unsigned *prop_hw_rev;
 	const unsigned *prop_hw_rev_end;
@@ -193,14 +192,6 @@ static void *load_dtbh_block(char **dtb_files, unsigned pagesize,
 		}
 
 		offset = fdt_path_offset(dtb, "/");
-
-		prop_model = fdt_getprop(dtb, offset, "model", &len);
-		if (strstr(prop_model, model) == NULL) {
-		    warnx("model of %s is invalid, skipping (expected *%s* but got %s)",
-			  *fname, model, prop_model);
-		    free(dtb);
-		    continue;
-		}
 
 		prop_chip = fdt_getprop(dtb, offset, "model_info-chip", &len);
 		if (len % (sizeof(uint32_t))) {
@@ -355,7 +346,6 @@ int main(int argc, char **argv)
 	uint32_t dt_platform_code = DTBH_PLATFORM_CODE_DEF;
 	uint32_t dt_subtype_code = DTBH_SUBTYPE_CODE_DEF;
 	unsigned dt_size;
-	char dt_model[32];
 
 	dtb_files = malloc(sizeof(char*) * DTB_MAX);
 	if (!dtb_files)
@@ -386,9 +376,6 @@ int main(int argc, char **argv)
 		} else if (!strcmp(arg, "--subtype")) {
 			read_val;
 			dt_subtype_code = strtoul(val, 0, 16);
-		} else if (!strcmp(arg, "--model")) {
-			read_val;
-			strcpy(dt_model, val);
 		} else if (*arg != '-') {
 			/* skip over already allocated file names */
 			for (; dtb_files[dt_count]; dt_count++)
@@ -410,7 +397,7 @@ int main(int argc, char **argv)
 	if (!dtb_files[0])
 		fail("no dtb files found");
 
-	dt_data = load_dtbh_block(dtb_files, pagesize, dt_platform_code, dt_subtype_code, &dt_size, dt_model);
+	dt_data = load_dtbh_block(dtb_files, pagesize, dt_platform_code, dt_subtype_code, &dt_size);
 	if (!dt_data)
 		fail("could not load device tree blobs");
 

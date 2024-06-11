@@ -11,27 +11,6 @@ if ARCH_EXYNOS
 
 menu "SAMSUNG EXYNOS SoCs Support"
 
-choice
-	prompt "Exynos device target"
-	default MACH_EXYNOS7885_NONE
-
-config MACH_EXYNOS7885_NONE
-	bool "None"
-
-config MACH_EXYNOS7885_JACKPOTLTE_EUR_OPEN
-	bool "Galaxy A8 (SM-A530F)"
-	select EXYNOS_DTBTOOL
-
-config MACH_EXYNOS7885_JACKPOT2LTE_EUR_OPEN
-	bool "Galaxy A8+ (SM-A730F)"
-	select EXYNOS_DTBTOOL
-
-config MACH_EXYNOS7885_A40_GLOBAL
-	bool "Galaxy A40 (SM-A405FN)"
-	select EXYNOS_DTBTOOL
-
-endchoice
-
 menuconfig EXYNOS_DTBTOOL
 	bool "Build dtbtool for Exynos"
 	select DTC
@@ -68,14 +47,6 @@ config EXYNOS_DTBH_PAGE_SIZE
 	  It should be equal to the page size of
 	  the Exynos boot image.
 	  Must be divisible by 2048.
-
-config EXYNOS_DTBH_MODEL
-	string "Exynos DTBH model number"
-	default "JACKPOTLTE EUR"
-	help
-	  This value is used to filter DTBs included
-	  on platforms where the bootloader may accept
-	  other platform's DTBs.
 
 endif
 
