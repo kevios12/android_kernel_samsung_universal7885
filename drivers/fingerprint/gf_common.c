@@ -48,7 +48,7 @@
 #define GF_CLASS_NAME "goodix_fp"
 #define GF_NETLINK_ROUTE 25
 #define MAX_NL_MSG_LEN 16
-#define WAKELOCK_HOLD_TIME 500 /* in ms */
+#define WAKELOCK_HOLD_TIME 400 /* in ms */
 
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
@@ -290,9 +290,7 @@ static void gfspi_netlink_recv(struct sk_buff *__skb)
 
 static int gfspi_netlink_init(struct gf_device *gf_dev)
 {
-	struct netlink_kernel_cfg cfg;
-
-	memset(&cfg, 0, sizeof(struct netlink_kernel_cfg));
+	struct netlink_kernel_cfg cfg = {0, };
 	cfg.input = gfspi_netlink_recv;
 
 	gf_dev->nl_sk =

@@ -300,7 +300,7 @@ static int muic_init_gpio_cb(void *data, int switch_sel)
 		pdata->rustproof_on = true;
 #endif /* !CONFIG_SEC_FACTORY */
 
-	pdata->afc_disable = false;
+	pdata->afc_disable = true;
 
 	if (pdata->set_gpio_uart_sel)
 		ret = pdata->set_gpio_uart_sel(pdata->uart_path);
