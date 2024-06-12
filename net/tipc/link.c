@@ -55,7 +55,7 @@ static const char tipc_bclink_name[] = "broadcast-link";
 static const struct nla_policy tipc_nl_link_policy[TIPC_NLA_LINK_MAX + 1] = {
 	[TIPC_NLA_LINK_UNSPEC]		= { .type = NLA_UNSPEC },
 	[TIPC_NLA_LINK_NAME] = {
-		.type = NLA_STRING,
+		.type = NLA_NUL_STRING,
 		.len = TIPC_MAX_LINK_NAME
 	},
 	[TIPC_NLA_LINK_MTU]		= { .type = NLA_U32 },
@@ -1247,7 +1247,9 @@ static int tipc_link_proto_rcv(struct tipc_link *l, struct sk_buff *skb,
 		/* fall thru' */
 
 	case ACTIVATE_MSG:
-		skb_linearize(skb);
+		if (skb_linearize(skb))
+			goto exit;
+
 		hdr = buf_msg(skb);
 
 		/* Complete own link name with peer's interface name */

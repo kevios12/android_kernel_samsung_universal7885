@@ -496,7 +496,7 @@ static int parse_power_seq_data(struct exynos_platform_fimc_is_module *pdata, st
 		DT_READ_U32(sn_np, "sensor_scenario", sensor_scenario);
 		DT_READ_U32(sn_np, "gpio_scenario",gpio_scenario);
 
-		pr_info("power_seq[%s] : sensor_scenario=%d, gpio_scenario=%d\n",
+		pr_debug("power_seq[%s] : sensor_scenario=%d, gpio_scenario=%d\n",
 			sn_np->name, sensor_scenario, gpio_scenario);
 
 		SET_PIN_INIT(pdata, sensor_scenario, gpio_scenario);
@@ -523,7 +523,7 @@ static int parse_power_seq_data(struct exynos_platform_fimc_is_module *pdata, st
 			DT_READ_U32(seq_np, "voltage", sensor_pin.voltage);
 
 			pr_debug("power_seq node_name=%s\n", seq_np->full_name);
-			pr_info("power_seq SET_PIN: pin_name=%s, name=%s, act=%d, value=%d, delay=%d, voltage=%d\n",
+			pr_debug("power_seq SET_PIN: pin_name=%s, name=%s, act=%d, value=%d, delay=%d, voltage=%d\n",
 				pin_name, sensor_pin.name, sensor_pin.act, sensor_pin.value, sensor_pin.delay, sensor_pin.voltage);
 
 			SET_PIN_VOLTAGE(pdata, sensor_scenario, gpio_scenario, sensor_pin.pin, sensor_pin.name,
