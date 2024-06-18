@@ -397,7 +397,6 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 	if (!domain)
 		return -EINVAL;
-#if 0
 	/* To handle reboot faster, it does not thrrotle frequency of domain0 */
 	if (system_state == SYSTEM_RESTART && domain->id != 0)
 		freq = domain->min_freq;
@@ -409,7 +408,7 @@ static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 
 	/* To guarantee applying frequency, update_freq() is called explicitly */
 	update_freq(domain, freq);
-#endif
+
 	/*
 	 * Although cpufreq governor is stopped in cpufreq_suspend(),
 	 * afterwards, frequency change can be requested by

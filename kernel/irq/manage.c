@@ -1342,7 +1342,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		}
 
 		if (new->flags & IRQD_PERF_CRITICAL)
-			affine_one_perf_thread(new->thread);
+			affine_one_perf_thread(new);
 	}
 
 	if (!alloc_cpumask_var(&mask, GFP_KERNEL)) {

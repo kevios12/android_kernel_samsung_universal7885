@@ -4393,9 +4393,10 @@ struct inode *__ext4_iget(struct super_block *sb, unsigned long ino,
 				ext4_error_inode(inode, function, line, 0,
 						 "iget: special inode unallocated");
 				ret = -EFSCORRUPTED;
-			} else
+			} else {
 				ret = -ESTALE;
 				print_iloc_info(sb,iloc);
+			}
 			goto bad_inode;
 		}
 		/* The only unlinked inodes we let through here have

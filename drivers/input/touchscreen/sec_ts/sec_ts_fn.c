@@ -735,6 +735,8 @@ static ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, ch
 		char buff[30] = {0, };
 		u16 string_addr;
 
+		size_t len = strlen(buff);
+
 		string_addr = current_index - (8 * i);
 		if (string_addr < 500)
 			string_addr += SEC_TS_CMD_SPONGE_LP_DUMP;
@@ -759,7 +761,7 @@ static ssize_t get_lp_dump(struct device *dev, struct device_attribute *attr, ch
 			snprintf(buff, sizeof(buff),
 					"%d: %04x%04x%04x%04x\n",
 					string_addr, data0, data1, data2, data3);
-			strncat(buf, buff, sizeof(buff));
+			strncat(buf, buff, sizeof(buff) - len - 1);
 		}
 	}
 
@@ -833,6 +835,7 @@ static ssize_t get_cmoffset_dump(struct sec_ts_data *ts, char *buf, int position
 	char buff[6] = {0, };
 	u16 temp;
 
+	size_t len = strlen(buff);
 
 	/* set Factory level */
 	ret = sec_ts_factory_level(ts, position);
@@ -841,7 +844,7 @@ static ssize_t get_cmoffset_dump(struct sec_ts_data *ts, char *buf, int position
 				"%s: failed to set factory level,%d\n", __func__, position);
 		goto err_exit;
 	}
-	
+
 	rBuff = kzalloc(max_node, GFP_KERNEL);
 	if (!rBuff)
 		goto err_mem;
@@ -880,16 +883,16 @@ static ssize_t get_cmoffset_dump(struct sec_ts_data *ts, char *buf, int position
 				temp = avg + temp;
 
 			snprintf(buff, sizeof(buff)," %4x", temp);
-			strncat(buf, buff, sizeof(buff));
+			strncat(buf, buff, sizeof(buff) - len - 1);
 		}
 		snprintf(buff, sizeof(buff),"\n");
-		strncat(buf, buff, sizeof(buff));
+		strncat(buf, buff, sizeof(buff) - len - 1);
 	}
 	input_err(true, &ts->client->dev, "%s: total buf size:%d\n", __func__,strlen(buf));
 
 err_invalid:
 	sec_ts_factory_level(ts, OFFSET_FW_NOSAVE);
-	kfree(rBuff);	
+	kfree(rBuff);
 	return strlen(buf);
 
 err_i2c:
@@ -951,6 +954,8 @@ static ssize_t get_pressure_cfoffset_strength_all(struct device *dev, struct dev
 	char buff[6] = {0, };
 	u16 temp;
 
+	size_t len = strlen(buff);
+
 	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
 		input_err(true, &ts->client->dev, "%s: Touch is stopped!\n", __func__);
 		return snprintf(buf, SEC_CMD_BUF_SIZE, "TSP turned off");
@@ -970,23 +975,23 @@ static ssize_t get_pressure_cfoffset_strength_all(struct device *dev, struct dev
 
 	for (i = 0; i < cfoffset_max; i++){
 		temp = rBuff[2*i+1] << 8 | rBuff[2*i];
-		
+
 		if (i % 3 == 0) {
 			snprintf(buff, sizeof(buff),"\n");
-			strncat(buf, buff, sizeof(buff));
+			strncat(buf, buff, sizeof(buff) - len - 1);
 		}
 		snprintf(buff, sizeof(buff)," %4X",temp);
-		strncat(buf, buff, sizeof(buff));
+		strncat(buf, buff, sizeof(buff) - len - 1);
 	}
 	snprintf(buff, sizeof(buff),"\n");
-	strncat(buf, buff, sizeof(buff));
+	strncat(buf, buff, sizeof(buff) - len - 1);
 
 	/* cf offset 24byte */
 	ret = ts->sec_ts_i2c_read(ts, SEC_TS_GET_FORCE_STRENGTH_DATA, rBuff, strength_max * 2);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev, "%s: read strength failed!\n", __func__);
 		snprintf(buff, sizeof(buff),"\n NG");
-		strncat(buf, buff, sizeof(buff));
+		strncat(buf, buff, sizeof(buff) - len - 1);
 		goto err_i2c;
 	}
 
@@ -995,10 +1000,10 @@ static ssize_t get_pressure_cfoffset_strength_all(struct device *dev, struct dev
 
 		if (i % 3 == 0) {
 			snprintf(buff, sizeof(buff),"\n");
-			strncat(buf, buff, sizeof(buff));
+			strncat(buf, buff, sizeof(buff) - len - 1);
 		}
 		snprintf(buff, sizeof(buff)," %4X",temp);
-		strncat(buf, buff, sizeof(buff));
+		strncat(buf, buff, sizeof(buff) - len - 1);
 	}
 
 	input_err(true, &ts->client->dev, "%s: total buf size:%d\n", __func__,strlen(buf));
@@ -2120,7 +2125,6 @@ static void module_on_master(void *device_data)
 static void get_chip_vendor(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
-	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[16] = { 0 };
 
 	strlcpy(buff, "SEC", sizeof(buff));
@@ -2335,7 +2339,6 @@ static void get_y_num(void *device_data)
 static void get_x_cross_routing(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
-	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[16] = { 0 };
 
 	sec_cmd_set_default_result(sec);
@@ -3826,7 +3829,7 @@ static void clear_cover_mode(void *device_data)
 #endif
 		}
 
-		if (!ts->power_status == SEC_TS_STATE_POWER_OFF && ts->reinit_done) {
+		if (!(ts->power_status == SEC_TS_STATE_POWER_OFF && ts->reinit_done)) {
 			if (ts->flip_enable)
 				sec_ts_set_cover_type(ts, true);
 			else

@@ -894,7 +894,7 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 		while ((i2c->msg_num != 0) && is_ack(i2c)) {
 			unsigned long stat = readl(i2c->regs + S3C2410_IICSTAT);
 
-		if (ret != num)
+		if (ret != num) {
 			dev_err(i2c->dev, "QUIRK_POLL incomplete xfer (%d)\n"
 				"I2C Stat Reg dump:\n"
 				"IIC STAT = 0x%08x\n"
@@ -903,6 +903,7 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 				, readl(i2c->regs + S3C2410_IICSTAT)
 				, readl(i2c->regs + S3C2410_IICCON));
 			i2c_s3c_irq_nextbyte(i2c, stat);
+			}
 			stat = readl(i2c->regs + S3C2410_IICSTAT);
 			if (stat & S3C2410_IICSTAT_ARBITR)
 				dev_err(i2c->dev, "deal with arbitration loss\n");

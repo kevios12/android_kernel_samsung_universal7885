@@ -751,7 +751,7 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 		psy_do_property("s2mu004-charger", set, POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
 
 		if (fuelgauge->reg_OTP_4E != reg_OTP_4E || fuelgauge->reg_OTP_4F != reg_OTP_4F) {
-			psy_do_property("s2mu004-charger", set, POWER_SUPPLY_EXT_PROP_FUELGAUGE_RESET, value);
+			psy_do_property("s2mu004-charger", set, (enum power_supply_property) POWER_SUPPLY_EXT_PROP_FUELGAUGE_RESET, value);
 
 			s2mu004_write_reg_byte(fuelgauge->i2c, 0x1F, 0x40);
 			msleep(50);
@@ -764,7 +764,7 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 				__func__, fuelgauge->reg_OTP_4E, fuelgauge->reg_OTP_4F, reg_OTP_4E, reg_OTP_4F);
 
 			if (fuelgauge->reg_OTP_4E != reg_OTP_4E || fuelgauge->reg_OTP_4F != reg_OTP_4F) {
-				psy_do_property("s2mu004-charger", set, POWER_SUPPLY_EXT_PROP_FUELGAUGE_RESET, value);
+				psy_do_property("s2mu004-charger", set, (enum power_supply_property) POWER_SUPPLY_EXT_PROP_FUELGAUGE_RESET, value);
 
 				s2mu004_write_reg_byte(fuelgauge->i2c, 0x1F, 0x40);
 				msleep(50);
@@ -963,10 +963,10 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 	info_soc = fuelgauge->info.soc/100;
 	if (info_soc > 93) {
 		value.intval = 0; /* digital ivr */
-		psy_do_property("s2mu004-charger", set, POWER_SUPPLY_EXT_PROP_ANDIG_IVR_SWITCH, value);
+		psy_do_property("s2mu004-charger", set, (enum power_supply_property) POWER_SUPPLY_EXT_PROP_ANDIG_IVR_SWITCH, value);
 	} else {
 		value.intval = 1; /* analog ivr */
-		psy_do_property("s2mu004-charger", set, POWER_SUPPLY_EXT_PROP_ANDIG_IVR_SWITCH, value);
+		psy_do_property("s2mu004-charger", set, (enum power_supply_property) POWER_SUPPLY_EXT_PROP_ANDIG_IVR_SWITCH, value);
 	}
 #endif
 
@@ -1608,7 +1608,7 @@ static int s2mu004_fg_set_property(struct power_supply *psy,
 	const union power_supply_propval *val)
 {
 	struct s2mu004_fuelgauge_data *fuelgauge = power_supply_get_drvdata(psy);
-	enum power_supply_ext_property ext_psp = psp;
+	enum power_supply_ext_property ext_psp = (enum power_supply_ext_property)psp;
 	u8 temp = 0;
 
 	switch (psp) {

@@ -155,8 +155,8 @@ static void wakelocks_gc(void)
 	if (++wakelocks_gc_count <= WL_GC_COUNT_MAX)
 		return;
 
-	schedule_work(&wakelock_work);
 do_gc:
+        schedule_work(&wakelock_work);
 }
 #else /* !CONFIG_PM_WAKELOCKS_GC */
 static inline void wakelocks_lru_add(struct wakelock *wl) {}

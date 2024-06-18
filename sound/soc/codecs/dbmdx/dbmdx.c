@@ -12733,7 +12733,7 @@ static void dbmdx_sv_work(struct work_struct *work)
 
 			p->unlock(p);
 
-			if ((nr_samples == nr_samples_in_fw) &&
+			if ((nr_samples == nr_samples_in_fw) &
 				DBMDX_MSLEEP_IF_AUDIO_BUFFER_EMPTY)
 				msleep(DBMDX_MSLEEP_IF_AUDIO_BUFFER_EMPTY);
 

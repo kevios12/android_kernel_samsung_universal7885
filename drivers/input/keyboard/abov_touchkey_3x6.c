@@ -397,7 +397,6 @@ sar_mode:
 
 static void touchkey_sar_sensing(struct abov_tk_info *info, int on)
 {
-	struct i2c_client *client = info->client;
 	int ret;
 	u8 cmd;
 
@@ -434,7 +433,6 @@ static void abov_grip_sw_reset(struct abov_tk_info *info)
 
 static void release_all_fingers(struct abov_tk_info *info)
 {
-	struct i2c_client *client = info->client;
 	int i;
 
 	input_info(true, &client->dev, "[TK] %s tc=%d\n", __func__, info->touchkey_count);
@@ -648,7 +646,6 @@ static ssize_t touchkey_led_control(struct device *dev,
 		 size_t count)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int data;
 	int ret;
 
@@ -998,7 +995,6 @@ static ssize_t touchkey_grip_sw_reset(struct device *dev,
 		 size_t count)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int data;
 	int ret;
 
@@ -1028,7 +1024,6 @@ static ssize_t touchkey_sensing_change(struct device *dev,
 		 size_t count)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int ret, data;
 
 	ret = sscanf(buf, "%d", &data);
@@ -1233,9 +1228,6 @@ static ssize_t touchkey_grip_irq_count_store(struct device *dev,
 static ssize_t touchkey_chip_name(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
-
 	input_info(true, &client->dev, "%s\n", __func__);
 
 	return sprintf(buf, "A96T3X6\n");
@@ -1245,7 +1237,6 @@ static ssize_t bin_fw_ver(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 
 	input_info(true, &client->dev, "fw version bin : 0x%x\n", info->fw_ver_bin);
 
@@ -1306,7 +1297,6 @@ static ssize_t read_fw_ver(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int ret;
 
 	ret = get_tk_fw_version(info, false);
@@ -1347,7 +1337,6 @@ static int abov_load_fw_kernel(struct abov_tk_info *info)
 
 static int abov_load_fw(struct abov_tk_info *info, u8 cmd)
 {
-	struct i2c_client *client = info->client;
 	struct file *fp;
 	mm_segment_t old_fs;
 	long fsize, nread;
@@ -1660,7 +1649,6 @@ static void abov_release_fw(struct abov_tk_info *info, u8 cmd)
 
 static int abov_flash_fw(struct abov_tk_info *info, bool probe, u8 cmd)
 {
-	struct i2c_client *client = info->client;
 	int retry = 2;
 	int ret;
 	int block_count;
@@ -1744,7 +1732,6 @@ static ssize_t touchkey_fw_update(struct device *dev,
 			struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int ret;
 	u8 cmd;
 
@@ -1805,7 +1792,6 @@ static ssize_t touchkey_fw_update_status(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int count = 0;
 
 	input_info(true, &client->dev, "%s : %d\n", __func__, info->fw_update_state);
@@ -1923,7 +1909,6 @@ static ssize_t flip_cover_mode_enable(struct device *dev,
 				      const char *buf, size_t count)
 {
 	struct abov_tk_info *info = dev_get_drvdata(dev);
-	struct i2c_client *client = info->client;
 	int flip_mode_on;
 
 	sscanf(buf, "%d\n", &flip_mode_on);
@@ -2049,7 +2034,6 @@ static struct attribute_group sec_touchkey_attr_group = {
 
 static int abov_tk_fw_check(struct abov_tk_info *info)
 {
-	struct i2c_client *client = info->client;
 	int ret;
 	bool force = false;
 

@@ -981,7 +981,7 @@ static int s2mu004_chg_set_property(struct power_supply *psy,
 		const union power_supply_propval *val)
 {
 	struct s2mu004_charger_data *charger = power_supply_get_drvdata(psy);
-	enum power_supply_ext_property ext_psp = psp;
+	enum power_supply_ext_property ext_psp = (enum power_supply_ext_property)psp;
 	int buck_state = ENABLE;
 	union power_supply_propval value;
 
@@ -1198,7 +1198,7 @@ static int s2mu004_chg_set_property(struct power_supply *psy,
 				/* USB LDO off */
 				s2mu004_update_reg(charger->i2c, S2MU004_PWRSEL_CTRL0,
 					0 << PWRSEL_CTRL0_SHIFT, PWRSEL_CTRL0_MASK);
-				psy_do_property("s2mu004-fuelgauge", set,
+				psy_do_property("s2mu004-fuelgauge", set, (enum power_supply_property)
 					POWER_SUPPLY_EXT_PROP_FUELGAUGE_FACTORY, value);
 			} else {
 				pr_info("%s: Bypass exit for current measure\n", __func__);

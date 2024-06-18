@@ -534,10 +534,12 @@ DECLARE_STATE_FUNC(press)
 	}
 }
 
+/*
 static void input_booster_disable(struct t_input_booster *_this)
 {
 	schedule_work(&_this->input_booster_reset_booster_work);
 }
+*/
 
 // ********** Detect Events ********** //
 void input_booster(struct input_dev *dev)
@@ -875,7 +877,6 @@ void input_event(struct input_dev *dev,
 		 unsigned int type, unsigned int code, int value)
 {
 	unsigned long flags;
-	int idx;
 
 	if (is_event_supported(type, dev->evbit, EV_MAX)) {
 
