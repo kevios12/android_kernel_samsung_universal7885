@@ -16,7 +16,7 @@
 
 include $(srctree)/arch/arm64/boot/dts/Makefile
 
-targets := Image Image.gz dtbo.img dtb.img
+targets := Image dtbo.img dtb.img
 
 DTB_OBJS := $(shell find $(obj)/dts/ -name \*.dtb)
 DTBO_OBJS := $(shell find $(obj)/dts/ -name \*.dtbo)
