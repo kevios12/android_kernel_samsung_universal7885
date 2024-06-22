@@ -812,3 +812,10 @@ config PROCESS_RECLAIM
 	 (addr, addr + size-bytes) of the process.
 
 	 Any other value is ignored.
+
+config OPLUS_MM_HACKS
+	bool "Enable hacks used by Oplus to improve memory management"
+	default y
+	help
+	  Improves memory management as well as swappiness. Used by Oplus
+	  on their devices, and has been tested on multiple devices from other OEMs.
