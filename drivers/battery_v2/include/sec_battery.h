@@ -413,6 +413,10 @@ struct sec_battery_info {
 	bool store_mode;
 	bool slate_mode;
 
+	/* charging disabler */
+	bool charging_enabled;
+	bool charging_suspended;
+
 	/* usb suspend */
 	bool usb_suspend_mode;
 
@@ -535,6 +539,7 @@ enum {
 
 	BATT_VF_ADC,
 	BATT_SLATE_MODE,
+	CHARGING_ENABLED,
 
 	BATT_LP_CHARGING,
 	SIOP_ACTIVATED,
