@@ -1,3 +1,24 @@
+V2 Changelog:
+################
+→ Upstream from linux-4.4.y-cip
+→ Kernel renamed to LTS due to Upstream
+→ Disabled more Logging / Log Spam / Traces
+→ Disabled MMC Test driver
+→ Implement battery charging_enabled node
+→ Introduce latest BFQ I/O Scheduler v8-v4.4
+→ DTS: improve Mali GPU dvfs table
+→ 95% of warns removed while building the Kernel
+→ Introduced and Enabled SRANDOM (gain 500% on /dev/random)
+→ Import Memory Management hacks from Oplus 
+→ Improve Memory Management
+→ Reduced jitter (better UI responsiveness)
+→ Improved Performance in UI/UX
+→ Upstream CPUIDLE
+→ fix SCSC Wi-Fi on LineageOS for Jackpotlte
+→ Switch to 300HZ Tick rate
+→ Disable SLUB_CPU_PARTIAL to reduce latency/spikes
+→ Misc Optimizations / Improvements
+
 V1.5 Changelog:
 ################
 **Nameless Installer**

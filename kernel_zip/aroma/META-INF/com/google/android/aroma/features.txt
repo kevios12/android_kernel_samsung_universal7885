@@ -1,6 +1,6 @@
 Nameless Features:
 -------------------------------
-→ Upstreamed to latest 4.4.302
+→ Upstreamed to latest 4.4.302-CIP
 → Unified Source (A40 + A8 2018) based on latest SM-A405FN_EUR_RR_Opensource
 → Built with latest ZyCromerZ Clang19 
 → latest KernelSU
@@ -10,3 +10,7 @@ Nameless Features:
 → BIG.LITTLE CPU Scheduler: new indroduced Ondemand governor for better Stability and Responsivness
 → Compatible with all ROM's (OneUI3 > OneUI6) / Eureka ROM's (AOSP Android ??11?? > Android 14)
 → AROMA Installer
+→ Disabled a lot of Debug / Logging and Traces stuff for Performance
+→ Smooth Experience
+→ BFQ I/O Scheduler
+→ using instead of URANDOM -> SRANDOM (gains 500% on /dev/random)
