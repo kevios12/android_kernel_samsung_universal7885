@@ -279,7 +279,7 @@ int s2mu004_irq_init(struct s2mu004_dev *s2mu004)
 
 	if(irq_is_enable){
 	ret = request_threaded_irq(s2mu004->irq, NULL, s2mu004_irq_thread,
-				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				   IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_PERF_AFFINE,
 				   "s2mu004-irq", s2mu004);
 	}
 	if (ret) {

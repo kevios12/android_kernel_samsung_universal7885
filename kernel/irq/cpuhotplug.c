@@ -36,7 +36,7 @@ static bool migrate_one_irq(struct irq_desc *desc)
 		return false;
 	}
 
-	if (irqd_has_set(d, IRQD_PERF_CRITICAL))
+	if (irqd_has_set(d, IRQF_PERF_AFFINE))
 		return false;
 
 	c = irq_data_get_irq_chip(d);

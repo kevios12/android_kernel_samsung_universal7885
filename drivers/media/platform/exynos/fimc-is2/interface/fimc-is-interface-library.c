@@ -1181,7 +1181,7 @@ int fimc_is_register_general_interrupt(struct general_intr_handler info)
 
 		/* Request IRQ */
 		ret = request_threaded_irq(lib->intr_handler_preproc.irq, NULL, fimc_is_general_interrupt_isr,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT, "preproc-pdaf-irq", &lib->intr_handler_preproc);
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_AFFINE, "preproc-pdaf-irq", &lib->intr_handler_preproc);
 		if (ret) {
 			err("Failed to register pdaf irq %d", lib->intr_handler_preproc.irq);
 			ret = -ENODEV;
@@ -1622,7 +1622,7 @@ int fimc_is_init_ddk_thread(void)
 		spin_lock_init(&lib->task_taaisp[i].work_lock);
 		init_kthread_worker(&lib->task_taaisp[i].worker);
 		snprintf(name, sizeof(name), "lib_%d_worker", i);
-		lib->task_taaisp[i].task = kthread_run(kthread_worker_fn,
+		lib->task_taaisp[i].task = kthread_run_perf_critical(cpu_perf_mask, kthread_worker_fn,
 							&lib->task_taaisp[i].worker,
 							name);
 		if (IS_ERR(lib->task_taaisp[i].task)) {

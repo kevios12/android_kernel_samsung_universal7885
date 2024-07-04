@@ -1193,6 +1193,10 @@ static const struct cpumask *get_adjusted_cpumask(const struct task_struct *p,
 	if (p->flags & PC_PERF_AFFINE)
 		return cpu_perf_mask;
 
+	/* Force all low-power kthreads onto the little cluster */
+	if (p->flags & PC_LITTLE_AFFINE)
+		return cpu_lp_mask;
+
 	/* Force all trivial, unbound kthreads onto the little cluster */
 	if (p->flags & PF_KTHREAD && p->pid != 1 &&
 		cpumask_equal(req_mask, cpu_all_mask))

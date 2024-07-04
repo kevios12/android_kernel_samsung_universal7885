@@ -158,7 +158,7 @@ bool irq_can_set_affinity_usr(unsigned int irq)
 
 	return __irq_can_set_affinity(desc) &&
 		!irqd_affinity_is_managed(&desc->irq_data) &&
-		!irqd_has_set(&desc->irq_data, IRQD_PERF_CRITICAL);
+		!irqd_has_set(&desc->irq_data, IRQF_PERF_AFFINE);
 }
 
 /**

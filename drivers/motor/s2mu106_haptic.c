@@ -551,7 +551,7 @@ static int s2mu106_haptic_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, haptic);
 
 	init_kthread_worker(&haptic->kworker);
-	kworker_task = kthread_run(kthread_worker_fn, &haptic->kworker, "s2mu106_haptic");
+	kworker_task = kthread_run_perf_critical(cpu_lp_mask, kthread_worker_fn, &haptic->kworker, "s2mu106_haptic");
 	if (IS_ERR(kworker_task)) {
 		pr_err("Failed to create message pump task\n");
 		error = -ENOMEM;

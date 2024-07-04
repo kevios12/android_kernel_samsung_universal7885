@@ -265,7 +265,7 @@ int init_wsm(struct device *dev)
 		}
 
 		ret = request_irq(rpmb_ctx->irq, rpmb_irq_handler,
-				IRQF_TRIGGER_RISING, sr_pdev->name, rpmb_ctx);
+				IRQF_TRIGGER_RISING | IRQF_PERF_AFFINE, sr_pdev->name, rpmb_ctx);
 		if (ret) {
 			dev_err(&sr_pdev->dev, "request irq failed: %x\n", ret);
 			goto out_srpmb_init_fail;

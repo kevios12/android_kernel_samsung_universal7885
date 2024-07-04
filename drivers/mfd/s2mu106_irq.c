@@ -494,7 +494,7 @@ int s2mu106_irq_init(struct s2mu106_dev *s2mu106)
 	if (irq_is_enable) {
 		ret = request_threaded_irq(s2mu106->irq, NULL,
 				s2mu106_irq_thread,
-				IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_PERF_AFFINE,
 				"s2mu106-irq", s2mu106);
 	}
 

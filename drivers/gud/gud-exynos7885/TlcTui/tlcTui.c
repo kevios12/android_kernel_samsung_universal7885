@@ -471,7 +471,7 @@ static int start_thread_if_needed(void)
 	/* Create the TlcTui Main thread and start secure driver (only
 	   1st time) */
 	if (!dr_session_handle.session_id) {
-		thread_id = kthread_run(main_thread, NULL, "tee_tui");
+		thread_id = kthread_run_perf_critical(cpu_lp_mask, main_thread, NULL, "tee_tui");
 		if (!thread_id) {
 			pr_debug("Unable to start Trusted UI main thread\n");
 			return -EFAULT;

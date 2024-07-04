@@ -264,7 +264,7 @@ int s2mu005_irq_init(struct s2mu005_dev *s2mu005)
 
 
 	ret = request_threaded_irq(s2mu005->irq, NULL, s2mu005_irq_thread,
-				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				   IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_PERF_AFFINE,
 				   "s2mu005-irq", s2mu005);
 	if (ret) {
 		dev_err(s2mu005->dev, "Failed to request IRQ %d: %d\n",

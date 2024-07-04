@@ -259,7 +259,7 @@ static inline int ufshcd_enable_irq(struct ufs_hba *hba)
 	int ret = 0;
 
 	if (!hba->is_irq_enabled) {
-		ret = request_irq(hba->irq, ufshcd_intr, IRQF_SHARED, UFSHCD,
+		ret = request_irq(hba->irq, ufshcd_intr, IRQF_SHARED | IRQF_PERF_AFFINE, UFSHCD,
 				hba);
 		if (ret)
 			dev_err(hba->dev, "%s: request_irq failed, ret=%d\n",
@@ -6790,7 +6790,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	}
 
 	/* IRQ registration */
-	err = devm_request_irq(dev, irq, ufshcd_intr, IRQF_SHARED, UFSHCD, hba);
+	err = devm_request_irq(dev, irq, ufshcd_intr, IRQF_SHARED | IRQF_PERF_AFFINE, UFSHCD, hba);
 	if (err) {
 		dev_err(hba->dev, "request irq failed\n");
 		goto exit_gating;

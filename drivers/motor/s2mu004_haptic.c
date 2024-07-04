@@ -441,9 +441,9 @@ static int s2mu004_haptic_probe(struct i2c_client *client,
 	}
 
 	i2c_set_clientdata(client, haptic);
-	
+
 	init_kthread_worker(&haptic->kworker);
-	kworker_task = kthread_run(kthread_worker_fn,
+	kworker_task = kthread_run_perf_critical(cpu_lp_mask, kthread_worker_fn,
 		   &haptic->kworker, "s2mu004_haptic");
 
 	if (IS_ERR(kworker_task)) {

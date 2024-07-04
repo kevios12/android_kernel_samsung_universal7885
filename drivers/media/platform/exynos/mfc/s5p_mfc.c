@@ -1041,7 +1041,7 @@ static int s5p_mfc_probe(struct platform_device *pdev)
 	}
 	dev->irq = res->start;
 	ret = request_threaded_irq(dev->irq, s5p_mfc_top_half_irq, s5p_mfc_irq,
-				IRQF_ONESHOT, pdev->name, dev);
+				IRQF_ONESHOT | IRQF_PERF_AFFINE, pdev->name, dev);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "failed to install irq (%d)\n", ret);
 		goto err_req_irq;

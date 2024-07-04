@@ -1211,7 +1211,7 @@ static int samsung_vts_devm_request_threaded_irq(
 
 	result = devm_request_threaded_irq(dev, data->irq[hw_irq],
 			NULL, thread_fn,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT, dev->init_name,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_AFFINE, dev->init_name,
 			pdev);
 	if (IS_ERR_VALUE(result)) {
 		dev_err(dev, "Unable to request irq %s: %d\n", irq_name, result);
