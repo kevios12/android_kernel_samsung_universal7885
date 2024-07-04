@@ -13,6 +13,7 @@
 #include <linux/fb.h>
 #include <linux/slab.h>
 #include <linux/version.h>
+#include <linux/battery_saver.h>
 
 /* The sched_param struct is located elsewhere in newer kernels */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
@@ -275,14 +276,19 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	if (action != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
+	if (is_battery_saver_on()) {
+		policy->min = policy->cpuinfo.min_freq;
+		return NOTIFY_OK;
+	}
+
 	/* Boost CPU to max frequency on wake, regardless of screen state */
 	if (test_bit(WAKE_BOOST, &b->state)) {
 		policy->min = get_max_boost_freq(policy);
 		return NOTIFY_OK;
 	}
 
-	/* Unboost when the screen is off */
-	if (test_bit(SCREEN_OFF, &b->state)) {
+	/* Unboost when the screen is off or battery saver is on */
+	if (is_battery_saver_on() || test_bit(SCREEN_OFF, &b->state)) {
 		policy->min = get_min_freq(policy);
 		return NOTIFY_OK;
 	}
