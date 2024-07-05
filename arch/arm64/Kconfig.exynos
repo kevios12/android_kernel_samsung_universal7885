@@ -18,3 +18,10 @@ config MACH_EXYNOS7885_JACKPOT2LTE_GLOBAL
 	default n
 	help
 	Say Y here if you want to enable building dtbo for Galaxy A8 2018.
+
+config USE_STOCK_CONFIG_FOR_IKCONFIG
+	bool "Use stock config for /proc/config.gz"
+	depends on IKCONFIG
+	default y
+	help
+	  Say Y here to use stock OEM unmodified defconfig for /proc/config.gz
