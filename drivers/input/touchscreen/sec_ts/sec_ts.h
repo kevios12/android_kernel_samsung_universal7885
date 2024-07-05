@@ -31,6 +31,7 @@
 #include <linux/module.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
+#include <linux/pm_qos.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/time.h>
@@ -732,6 +733,8 @@ struct sec_ts_data {
 	struct delayed_work ghost_check;
 	u8 tsp_dump_lock;
 	int nv;
+
+	struct pm_qos_request pm_qos_req;
 
 	struct sec_tclm_data *tdata;
 
