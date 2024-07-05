@@ -79,6 +79,12 @@ config MULTI_CHARGING
 	help
 	Say Y to include support for multi charger ICs
 
+config ENABLE_FULL_BY_SOC
+	bool "make full by soc 100%"
+	help
+	default n
+	 Say Y to include support to make full by soc 100%
+
 config STEP_CHARGING
 	bool "support for step charging"
 	help
