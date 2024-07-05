@@ -1285,7 +1285,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 			case SEC_TS_GESTURE_CODE_SPAY:
 				ts->scrub_id = SPONGE_EVENT_TYPE_SPAY;
 				input_info(true, &ts->client->dev, "%s: SPAY: %d\n", __func__, ts->scrub_id);
-				input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				input_report_key(ts->input_dev, KEY_POWER, 1);
 				ts->all_spay_count++;
 				break;
 			case SEC_TS_GESTURE_CODE_DOUBLE_TAP:
@@ -1301,7 +1301,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 				input_info(true, &ts->client->dev, "%s: AOD: %d, %d, %d\n",
 								__func__, ts->scrub_id, ts->scrub_x, ts->scrub_y);
 #endif
-				input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				input_report_key(ts->input_dev, KEY_POWER, 1);
 				ts->all_aod_tap_count++;
 				break;
 			case SEC_TS_GESTURE_CODE_SINGLE_TAP:
@@ -1316,7 +1316,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 				input_info(true, &ts->client->dev, "%s: SINGLE TAP: %d, %d, %d\n",
 						__func__, ts->scrub_id, ts->scrub_x, ts->scrub_y);
 #endif
-				input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				input_report_key(ts->input_dev, KEY_POWER, 1);
 				break;
 			case SEC_TS_GESTURE_CODE_FORCE:
 				if (ts->power_status == SEC_TS_STATE_POWER_ON) {
@@ -1331,11 +1331,11 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 							ts->scrub_id = SPONGE_EVENT_TYPE_PRESSURE_RELEASED;
 						}
 					}
-					input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 1);
+					input_report_key(ts->input_dev, KEY_POWER, 1);
 				} else {
 					if (p_gesture_status->gesture_id == SEC_TS_EVENT_PRESSURE_RELEASED) {
 						input_report_key(ts->input_dev, KEY_HOMEPAGE, 0);
-						input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 1);
+						input_report_key(ts->input_dev, KEY_POWER, 1);
 						ts->scrub_id = SPONGE_EVENT_TYPE_AOD_HOMEKEY_RELEASE_NO_HAPTIC;
 						input_sync(ts->input_dev);
 
@@ -1365,7 +1365,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 			}
 
 			input_sync(ts->input_dev);
-			input_report_key(ts->input_dev, KEY_BLACK_UI_GESTURE, 0);
+			input_report_key(ts->input_dev, KEY_POWER, 0);
 			break;
 
 		default:
@@ -2032,7 +2032,7 @@ static void sec_ts_set_input_prop(struct sec_ts_data *ts, struct input_dev *dev,
 	set_bit(EV_SW, dev->evbit);
 	set_bit(BTN_TOUCH, dev->keybit);
 	set_bit(BTN_TOOL_FINGER, dev->keybit);
-	set_bit(KEY_BLACK_UI_GESTURE, dev->keybit);
+	set_bit(KEY_POWER, dev->keybit);
 #ifdef SEC_TS_SUPPORT_TOUCH_KEY
 	if (ts->plat_data->support_mskey) {
 		int i;
