@@ -46,17 +46,32 @@ struct exynos_ufc_req {
 static int last_max_limit = -1;
 static int sse_mode;
 
-unsigned int big_throttle_limit = 0;
-unsigned int little_throttle_limit = 0;
-unsigned int gpu_throttle_limit = 0;
+static unsigned int big_throttle_limit = 0;
+static unsigned int little_throttle_limit = 0;
+static unsigned int gpu_throttle_limit = 0;
+
+int get_big_throttle_limit(void)
+{
+	return big_throttle_limit;
+}
+
+int get_little_throttle_limit(void)
+{
+	return little_throttle_limit;
+}
+
+int get_gpu_throttle_limit(void)
+{
+	return gpu_throttle_limit;
+}
 
 bool is_throttle_limit(unsigned int clipped_freq, int cpu)
 {
 	unsigned int freq = 0;
 	if (cpumask_test_cpu(cpu, cpu_perf_mask)) {
-		freq = big_throttle_limit;
+		freq = get_big_throttle_limit();
 	} else {
-		freq = little_throttle_limit;
+		freq = get_little_throttle_limit();
 	}
 
 	return (clipped_freq < freq);
@@ -502,6 +517,9 @@ static ssize_t store_cpufreq_max_limit(struct kobject *kobj, struct kobj_attribu
 
 	if (sscanf(buf, "%8d", &input) < 1)
 		return -EINVAL;
+
+	if (input < get_big_throttle_limit() && input != -1)
+		input = get_big_throttle_limit();
 
 	ufc_req.last_max_input = input;
 	last_max_limit = input;
