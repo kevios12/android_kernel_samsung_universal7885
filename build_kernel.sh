@@ -17,7 +17,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Define Kernel Version
-VER="v2"
+VER="v2.5"
 
 # Compiler
 TOOLCHAIN="$SRCTREE/toolchain/bin"

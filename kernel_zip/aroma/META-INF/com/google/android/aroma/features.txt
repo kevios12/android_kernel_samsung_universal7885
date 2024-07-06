@@ -14,3 +14,7 @@ Nameless Features:
 → Smooth Experience
 → BFQ I/O Scheduler
 → using instead of URANDOM -> SRANDOM (gains 500% on /dev/random)
+→ Stable and Optimized Kernel
+→ Charging ETA on OneUI based ROM's
+→ cpu_input_boost adapted for our SOC
+

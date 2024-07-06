@@ -1,3 +1,14 @@
+V2.5 Changelog:
+################
+→ fixed DT2W for Jackpotlte (drop single tap)
+→ fixed APK / APP Installation
+→ fixed Device Freeze
+→ rework cpu_input_booster for better UI Responsivness
+→ Treewide: mark IRQ/kthread as non-Performance/Performance critical
+→ Disabled NAD_BALANCER (kmsg: NO SUPPORT FOR NAD_BALANCE)
+→ Match A40 defconfig with jackpotlte ones (re-enabled some missing stuff and removed Debug Stuff)
+→ reduced Lag
+
 V2 Changelog:
 ################
 → Upstream from linux-4.4.y-cip
