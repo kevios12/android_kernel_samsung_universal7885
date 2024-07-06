@@ -4,6 +4,20 @@ dtbo-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
 	exynos/exynos7904-a40_eur_open_00.dtbo \
 	exynos/exynos7904-a40_eur_open_01.dtbo
 
+dtbo-$(CONFIG_MACH_EXYNOS7885_A30s_GLOBAL) := \
+	exynos/exynos7904-a30s_eur_open_00.dtbo \
+	exynos/exynos7904-a30s_eur_open_01.dtbo \
+	exynos/exynos7904-a30s_eur_open_02.dtbo \
+	exynos/exynos7904-a30s_eur_open_03.dtbo
+
+dtbo-$(CONFIG_MACH_EXYNOS7885_A30_GLOBAL) := \
+	exynos/exynos7904-a30_cis_open_00.dtbo \
+	exynos/exynos7904-a30_cis_open_01.dtbo \
+	exynos/exynos7904-a30_cis_open_02.dtbo \
+	exynos/exynos7904-a30_swa_open_00.dtbo \
+	exynos/exynos7904-a30_swa_open_01.dtbo \
+	exynos/exynos7904-a30_swa_open_02.dtbo
+
 dtbo-$(CONFIG_MACH_EXYNOS7885_JACKPOTLTE_GLOBAL) := \
 	exynos/exynos7885-jackpotlte_dummy.dtbo
 
