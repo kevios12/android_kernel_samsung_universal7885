@@ -1143,6 +1143,7 @@ usi_mode = "hsi2c0" or "hsi2c1" or "spi" or "uart"
 	samsung,i2c-sda-delay = <100>;
 	samsung,i2c-max-bus-freq = <400000>;
 	touchscreen@20 {
+		status = "disabled";
 		compatible = "zinitix,bt532_ts_device";
 		reg = <0x20>;
 		pinctrl-names = "on_state", "off_state";
@@ -1164,6 +1165,21 @@ usi_mode = "hsi2c0" or "hsi2c1" or "spi" or "uart"
 		zinitix,mis_cal_check;
 		zinitix,factory_item_version = <6>;
 		support_ear_detect_mode;
+	};
+	touchscreen@50 {
+		compatible = "imagis,ist30xx-ts";
+		reg = <0x50>;
+		pinctrl-names = "on_state", "off_state";
+		pinctrl-0 = <&attn_irq>;
+		pinctrl-1 = <&attn_input>;
+		imagis,irq-gpio = <&gpa0 0 0>;
+		imagis,regulator_avdd = "tsp_avdd";
+		imagis,fw-bin = <1>;
+		imagis,octa-hw = <1>;
+		imagis,ic-version = "ist3038h";
+		imagis,project-name = "a40";
+		imagis,pat_function = <2>;
+		imagis,afe_base = <0x0116>;
 	};
 };
 
