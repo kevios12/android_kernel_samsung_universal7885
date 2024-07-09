@@ -1,1 +1,0 @@
-cmd_drivers/gpu/arm/b_r26p0/tests/kutf/kutf.ko := /home/kevios12/kernel/stock/toolchain/bin/aarch64-linux-android-ld -EL -r  -T ./scripts/module-common.lds -T ./arch/arm64/kernel/module.lds --build-id  -o drivers/gpu/arm/b_r26p0/tests/kutf/kutf.ko drivers/gpu/arm/b_r26p0/tests/kutf/kutf.o drivers/gpu/arm/b_r26p0/tests/kutf/kutf.mod.o

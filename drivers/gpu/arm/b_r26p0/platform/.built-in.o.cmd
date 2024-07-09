@@ -1,1 +1,0 @@
-cmd_drivers/gpu/arm/b_r26p0/platform/built-in.o :=  /home/kevios12/kernel/stock/toolchain/bin/aarch64-linux-android-ld -EL   -r -o drivers/gpu/arm/b_r26p0/platform/built-in.o drivers/gpu/arm/b_r26p0/platform/exynos/built-in.o ; scripts/mod/modpost drivers/gpu/arm/b_r26p0/platform/built-in.o
