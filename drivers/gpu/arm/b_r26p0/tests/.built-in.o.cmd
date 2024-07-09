@@ -1,1 +1,0 @@
-cmd_drivers/gpu/arm/b_r26p0/tests/built-in.o :=  rm -f drivers/gpu/arm/b_r26p0/tests/built-in.o; /home/kevios12/kernel/stock/toolchain/bin/aarch64-linux-android-ar rcsD drivers/gpu/arm/b_r26p0/tests/built-in.o
