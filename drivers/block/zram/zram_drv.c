@@ -54,6 +54,8 @@ static int zram_major;
 static const char *default_compressor = "zstd";
 #elif IS_ENABLED(CONFIG_CRYPTO_LZ4)
 static const char *default_compressor = "lz4";
+#elif IS_ENABLED(CONFIG_CRYPTO_LZ4FAST)
+static const char *default_compressor = "lz4fast";
 #else
 static const char *default_compressor = "lzo";
 #endif
