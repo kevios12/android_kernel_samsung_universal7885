@@ -3,6 +3,7 @@
 */
 
 #include <linux/device.h>
+#include <linux/module.h>
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
@@ -52,6 +53,9 @@
 
 #include <linux/completion.h>
 #include <linux/ccic/ccic_misc.h>
+
+bool force_dex_mode = false;
+module_param(force_dex_mode, bool, 0755);
 
 #if defined(CONFIG_SWITCH)
 static struct switch_dev switch_dock = {
@@ -1189,6 +1193,13 @@ static int usbpd_manager_check_accessory(struct usbpd_manager_data *manager)
 	uint16_t pid = manager->Product_ID;
 	uint16_t acc_type = CCIC_DOCK_DETACHED;
 
+	if (force_dex_mode) {
+		if (((pid < GEARVR_PRODUCT_ID) || (pid > GEARVR_PRODUCT_ID_5)) && (acc_type != CCIC_DOCK_NEW) && (pid != DEXPAD_PRODUCT_ID)) {
+ 			vid = SAMSUNG_VENDOR_ID;
+ 			pid = DEXDOCK_PRODUCT_ID;
+ 		}
+	}
+
 	/* detect Gear VR */
 	if (manager->acc_type == CCIC_DOCK_DETACHED) {
 		if (vid == SAMSUNG_VENDOR_ID) {
@@ -1210,6 +1221,14 @@ static int usbpd_manager_check_accessory(struct usbpd_manager_data *manager)
 			case DEXDOCK_PRODUCT_ID:
 				acc_type = CCIC_DOCK_DEX;
 				pr_info("%s : Samsung DEX connected.\n", __func__);
+#if defined(CONFIG_USB_HW_PARAM)
+				if (o_notify)
+					inc_hw_param(o_notify, USB_CCIC_DEX_USE_COUNT);
+#endif
+				break;
+			case DEXPAD_PRODUCT_ID:
+				acc_type = CCIC_DOCK_DEXPAD;
+				pr_info("%s : Samsung DEX PAD connected.\n", __func__);
 #if defined(CONFIG_USB_HW_PARAM)
 				if (o_notify)
 					inc_hw_param(o_notify, USB_CCIC_DEX_USE_COUNT);
