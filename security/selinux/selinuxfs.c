@@ -41,6 +41,8 @@
 #include "objsec.h"
 #include "conditional.h"
 
+static bool fake_enforce = false;
+
 /* Policy capability filenames */
 static char *policycap_names[] = {
 	"network_peer_controls",
@@ -134,7 +136,11 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+	if (fake_enforce)
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", 1);
+	else
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
@@ -164,6 +170,17 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	length = -EFAULT;
 	if (copy_from_user(page, buf, count))
 		goto out;
+
+	length = -EINVAL;
+	if (sscanf(page, "%d", &new_value) != 1)
+		goto out;
+
+	if (new_value == 2)
+		fake_enforce = true;
+	else
+		fake_enforce = false;
+
+	new_value = 0;
 
 	length = -EINVAL;
 	if (sscanf(page, "%d", &new_value) != 1)
