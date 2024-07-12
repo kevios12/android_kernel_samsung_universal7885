@@ -51,6 +51,9 @@ dtb-$(CONFIG_MACH_EXYNOS7885_JACKPOT2LTE_GLOBAL) := \
 dtb-$(CONFIG_MACH_EXYNOS7885_A40_GLOBAL) := \
 	exynos/exynos7885.dtb
 
+dtb-$(CONFIG_MACH_EXYNOS7885_A30s_GLOBAL) := \
+        exynos/exynos7885.dtb
+
 dtb-$(CONFIG_MACH_EXYNOS7885_A30_GLOBAL) := \
         exynos/exynos7885.dtb
 
