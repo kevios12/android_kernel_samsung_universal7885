@@ -1,9 +1,9 @@
 Nameless Features:
 -------------------------------
 → Upstreamed to latest 4.4.302-CIP
-→ Unified Source (A40 + A8 2018) based on latest SM-A405FN_EUR_RR_Opensource
-→ Built with latest ZyCromerZ Clang19 
-→ latest KernelSU
+→ Unified Source (Support list) based on latest SM-A405FN_EUR_RR_Opensource
+→ Support list: A40/A30s (Exynos7904) | A8 2018 (Exynos7885)
+→ can be Built with latest ZyCromerZ Clang19 
 → Till Android 14 compatible
 → DT2W / DeepSleep
 → Stock CPU Clockspeed
@@ -17,4 +17,5 @@ Nameless Features:
 → Stable and Optimized Kernel
 → Charging ETA on OneUI based ROM's
 → cpu_input_boost adapted for our SOC
-
+→ Fast LZ4 compressor (lz4fast, crypto algorithm)
+→ SamsungDex Support

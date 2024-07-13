@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -e
+
 # Export build variables
 export KBUILD_BUILD_USER="localhost"
 export KBUILD_BUILD_HOST="localhost"
@@ -17,7 +19,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Define Kernel Version
-VER="v2.5"
+VER="v3"
 
 # Compiler
 TOOLCHAIN="$SRCTREE/toolchain/bin"
@@ -55,9 +57,7 @@ init() {
 		mkdir $SRCTREE/kernel_zip/aroma/kernel/permissive
 		sleep 1
 	fi
-	echo -e "${YELLOW}Syncing Git Submodule [KernelSU]${NC}\n"
-	git submodule init && git submodule update
-	sleep 1
+	git restore $SRCTREE/kernel_zip/aroma/META-INF/com/google/android/aroma-config
 	clear
 	find "$ANYKERNEL" -type f -name "*.zip" -exec rm {} +
 	echo -e "${YELLOW}Do you want to make a Clean Build? [yes|no]${NC}\n"
@@ -74,7 +74,7 @@ init() {
 	if [ "$ans" = "YES" ]; then
 		clear
 		echo -e "${YELLOW}Cleaning up ...${NC}\n"
-		rm -rf out && make clean && make mrproper
+		rm -rf out out2 && make clean && make mrproper
 		toolchain
 	elif [ "$ans" = "NO" ]; then
 		toolchain
@@ -627,8 +627,10 @@ aroma() {
 	# create and pack AROMA
 	cd "$ANYKERNEL" || exit
 	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
+	sed -i "s/sysprop/${codename}/g" "$SRCTREE/kernel_zip/aroma/META-INF/com/google/android/aroma-config"
 		create_aroma META-INF tools kernel
 	elif [ "$codename" = "jackpotlte" ]; then
+	sed -i 's/sysprop/A8 2018/g' "$SRCTREE/kernel_zip/aroma/META-INF/com/google/android/aroma-config"
 		create_aroma META-INF tools kernel
 	fi
 	cp "$SRCTREE/kernel_zip/aroma/$AROMA_FILENAME" "$SRCTREE/kernel_zip/"

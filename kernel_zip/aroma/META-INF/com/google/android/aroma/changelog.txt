@@ -1,3 +1,15 @@
+V3 Changelog:
+################
+→ add A30s to Support list
+→ add SamsungDex Support
+→ import LZ4 Module v1.9.4
+→ import crypto LZ4FAST algorithm
+→ LZ4FAST is the Default compressor
+→ increase kernel log buffer to 2MB
+→ Disable Default Power Efficient WQ (has some performance overhead)
+→ pass some SafetyNet flags over proc/cmdline
+→ dropped KernelSU due to different Bugs in the Kernel
+
 V2.5 Changelog:
 ################
 → fixed DT2W for Jackpotlte (drop single tap)
