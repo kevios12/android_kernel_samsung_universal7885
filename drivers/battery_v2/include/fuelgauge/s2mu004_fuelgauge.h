@@ -147,6 +147,12 @@ typedef struct s2mu004_fuelgauge_platform_data {
 #endif
 } s2mu004_fuelgauge_platform_data_t;
 
+struct cv_slope {
+	int fg_current;
+	int soc;
+	int time;
+};
+
 struct s2mu004_fuelgauge_data {
 		struct device           *dev;
 		struct i2c_client       *i2c;
@@ -182,6 +188,10 @@ struct s2mu004_fuelgauge_data {
 		unsigned int capacity_max;      /* only for dynamic calculation */
 		unsigned int standard_capacity;
 		int raw_capacity;
+		int current_avg;
+		unsigned int ttf_capacity;
+		struct cv_slope *cv_data;
+		int cv_data_length;
 
 		bool initial_update_of_soc;
 		bool sleep_initial_update_of_soc;
