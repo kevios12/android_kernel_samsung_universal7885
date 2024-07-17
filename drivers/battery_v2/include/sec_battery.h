@@ -121,6 +121,7 @@
 #define BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE	0x00000004
 #define BATT_MISC_EVENT_BATT_RESET_SOC		0x00000008
 #define BATT_MISC_EVENT_HICCUP_TYPE		0x00000020
+#define BATT_MISC_EVENT_FULL_CAPACITY		0x01000000
 
 #define SEC_INPUT_VOLTAGE_5V	5
 #define SEC_INPUT_VOLTAGE_9V	9
@@ -475,6 +476,8 @@ struct sec_battery_info {
 	unsigned long cal_safety_time;
 	int fg_reset;
 
+	int batt_full_capacity;
+
 	bool block_water_event;
 
 #if defined(CONFIG_FG_FULLCAP_FROM_BATTERY)
@@ -676,6 +679,7 @@ enum {
 	NORMAL_MODE_BYPASS,
 	FACTORY_VOLTAGE_REGULATION,
 	FACTORY_MODE_DISABLE,
+	BATT_FULL_CAPACITY,
 };
 
 enum {

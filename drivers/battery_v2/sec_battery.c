@@ -188,6 +188,7 @@ static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(normal_mode_bypass),
 	SEC_BATTERY_ATTR(factory_voltage_regulation),
 	SEC_BATTERY_ATTR(factory_mode_disable),
+	SEC_BATTERY_ATTR(batt_full_capacity),
 };
 
 static enum power_supply_property sec_battery_props[] = {
@@ -1114,9 +1115,10 @@ static int sec_bat_set_charge(
 	if (battery->cable_type == SEC_BATTERY_CABLE_HMT_CONNECTED)
 		return 0;
 
-	if ((battery->current_event & SEC_BAT_CURRENT_EVENT_CHARGE_DISABLE) &&
+	if ((battery->current_event & SEC_BAT_CURRENT_EVENT_CHARGE_DISABLE ||
+		battery->misc_event & BATT_MISC_EVENT_FULL_CAPACITY) &&
 		(chg_mode == SEC_BAT_CHG_MODE_CHARGING)) {
-		dev_info(battery->dev, "%s: charge disable by HMT\n", __func__);
+		dev_info(battery->dev, "%s: charge disable by HMT or SOC\n", __func__);
 		chg_mode = SEC_BAT_CHG_MODE_CHARGING_OFF;
 	}
 
@@ -2300,8 +2302,8 @@ static bool sec_bat_temperature_check(
 	} else {
 		/* if recovered from not charging */
 		if ((battery->health == POWER_SUPPLY_HEALTH_GOOD) &&
-			(battery->status ==
-			 POWER_SUPPLY_STATUS_NOT_CHARGING)) {
+			(battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING) &&
+			!(battery->misc_event & BATT_MISC_EVENT_FULL_CAPACITY)) {
 			battery->is_abnormal_temp = false;
 			dev_info(battery->dev,
 					"%s: Safe Temperature\n", __func__);
@@ -3832,6 +3834,47 @@ static void sec_bat_measure_capacity(struct sec_battery_info *battery, struct ti
 }
 #endif
 
+static void sec_bat_recov_full_capacity(struct sec_battery_info *battery)
+{
+	sec_bat_set_misc_event(battery, 0, BATT_MISC_EVENT_FULL_CAPACITY);
+
+	if (battery->status == POWER_SUPPLY_STATUS_NOT_CHARGING
+		&& battery->health == POWER_SUPPLY_HEALTH_GOOD) {
+		sec_bat_set_charging_status(battery,
+			POWER_SUPPLY_STATUS_CHARGING);
+		sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING);
+	}
+}
+
+static void sec_bat_check_full_capacity(struct sec_battery_info *battery)
+{
+	int rechg_capacity = battery->batt_full_capacity - 2;
+
+	if (battery->batt_full_capacity >= 100 || battery->batt_full_capacity <= 0 ||
+		battery->status == POWER_SUPPLY_STATUS_DISCHARGING) {
+		if (battery->misc_event & BATT_MISC_EVENT_FULL_CAPACITY) {
+			pr_info("%s: full_capacity(%d) status(%d)\n",
+				__func__, battery->batt_full_capacity, battery->status);
+			sec_bat_recov_full_capacity(battery);
+		}
+		return;
+	}
+
+	if (battery->misc_event & BATT_MISC_EVENT_FULL_CAPACITY) {
+		if (battery->capacity <= rechg_capacity) {
+			pr_info("%s : start re-charging(%d, %d)\n", __func__, battery->capacity, rechg_capacity);
+			sec_bat_recov_full_capacity(battery);
+		}
+	} else if (battery->capacity >= battery->batt_full_capacity) {
+		pr_info("%s : stop charging(%d, %d)\n", __func__, battery->capacity, battery->batt_full_capacity);
+
+		sec_bat_set_misc_event(battery, BATT_MISC_EVENT_FULL_CAPACITY,
+			BATT_MISC_EVENT_FULL_CAPACITY);
+		sec_bat_set_charging_status(battery, POWER_SUPPLY_STATUS_NOT_CHARGING);
+		sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING_OFF);
+	}
+}
+
 static void sec_bat_monitor_work(
 				struct work_struct *work)
 {
@@ -3907,6 +3950,8 @@ static void sec_bat_monitor_work(
 #endif
 	/* time to full check */
 	sec_bat_calc_time_to_full(battery);
+
+	sec_bat_check_full_capacity(battery);
 
 	/* 0. test mode */
 	if (battery->test_mode) {
@@ -5539,6 +5584,10 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		break;
 	case FACTORY_MODE_DISABLE:
 		break;
+	case BATT_FULL_CAPACITY:
+		pr_info("%s: BATT_FULL_CAPACITY = %d\n", __func__, battery->batt_full_capacity);
+		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", battery->batt_full_capacity);
+		break;
 	default:
 		i = -EINVAL;
 		break;
@@ -6890,6 +6939,21 @@ ssize_t sec_bat_store_attrs(
 		if (sscanf(buf, "%10d\n", &x) == 1) {
 			value.intval = x;
 			psy_do_property(battery->pdata->charger_name, set, (enum power_supply_property) POWER_SUPPLY_EXT_PROP_DISABLE_FACTORY_MODE, value);
+			ret = count;
+		}
+		break;
+	case BATT_FULL_CAPACITY:
+		if (sscanf(buf, "%10d\n", &x) == 1) {
+			if (x >= 0 && x <= 100) {
+				pr_info("%s: update BATT_FULL_CAPACITY(%d)\n", __func__, x);
+				battery->batt_full_capacity = x;
+
+				wake_lock(&battery->monitor_wake_lock);
+				queue_delayed_work(battery->monitor_wqueue,
+					&battery->monitor_work, 0);
+			} else {
+				pr_info("%s: out of range(%d)\n", __func__, x);
+			}
 			ret = count;
 		}
 		break;
@@ -9360,6 +9424,13 @@ static int sec_bat_parse_dt(struct device *dev,
 		pdata->select_pd_input_current = 1000;
 	}
 
+	ret = of_property_read_u32(np, "battery,select_pd_input_current",
+		&pdata->select_pd_input_current);
+	if (ret) {
+		pr_info("%s : select_pd_input_current is Empty\n", __func__);
+		pdata->select_pd_input_current = 1000;
+	}
+
 	ret = of_property_read_u32(np, "battery,pre_afc_work_delay",
 			&pdata->pre_afc_work_delay);
 	if (ret) {
@@ -10507,6 +10578,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	else
 		sleep_mode = false;
 #endif
+
+	battery->batt_full_capacity = 0;
 
 	/* Check High Voltage charging option for wired charging */
 	if (get_afc_mode() == CH_MODE_AFC_DISABLE_VAL) {
