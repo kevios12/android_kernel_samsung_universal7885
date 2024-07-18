@@ -1,5 +1,7 @@
 # Font handling
 
+ccflags-y += -O3
+
 font-objs := fonts.o
 
 font-objs-$(CONFIG_FONT_SUN8x16)   += font_sun8x16.o

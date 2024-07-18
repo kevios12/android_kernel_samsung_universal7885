@@ -19,6 +19,8 @@ KCOV_INSTRUMENT_dynamic_debug.o := n
 # convention (see CONFIG_ARCH_HWEIGHT_CFLAGS).
 KCOV_INSTRUMENT_hweight.o := n
 
+ccflags-y += -O3
+
 lib-y := ctype.o string.o vsprintf.o cmdline.o \
 	 rbtree.o radix-tree.o dump_stack.o timerqueue.o\
 	 idr.o int_sqrt.o extable.o \
