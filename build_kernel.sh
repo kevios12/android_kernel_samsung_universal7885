@@ -209,6 +209,10 @@ toolchain() {
 	fi
 }
 
+revert_python2() {
+	git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb > /dev/null || true
+}
+
 select_device() {
 	echo -e "${GREEN}Please select your Device${NC}\n"
 	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
@@ -216,7 +220,7 @@ select_device() {
 		"Galaxy A40 (a40)")
 			clear
 			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb
+			revert_python2
 			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
@@ -263,7 +267,7 @@ select_device() {
 		"Galaxy A30s (a30s)")
 			clear
 			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb
+			revert_python2
 			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
@@ -310,7 +314,7 @@ select_device() {
 		"Galaxy A30 (a30)")
 			clear
 			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb
+			revert_python2
 			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
@@ -459,9 +463,10 @@ set_selinux_enforcing() {
 	sed -i 's/CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE=y/# CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE is not set/g' arch/arm64/configs/exynos7885-${codename}_defconfig
 }
 
-make_out() {
+make_common() {
+	trap "echo -e \"${RED}Build Error!${NC}\n\"" EXIT
 	PATH=$TOOLCHAIN:$PATH \
-		make O=out -j$(nproc --all) \
+		make O=out$1 -j$(nproc --all) \
 		ARCH=arm64 \
 		LLVM_DIS="$LLVM_DIS_ARGS" \
 		LLVM=1 \
@@ -469,20 +474,16 @@ make_out() {
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
 		CROSS_COMPILE="$CROSS" \
-		CROSS_COMPILE_ARM32="$CROSS_ARM32" &>compile.log
+		CROSS_COMPILE_ARM32="$CROSS_ARM32" &>compile$1.log
+	trap "" EXIT
+}
+
+make_out() {
+	make_common
 }
 
 make_out2() {
-	PATH=$TOOLCHAIN:$PATH \
-		make O=out2 -j$(nproc --all) \
-		ARCH=arm64 \
-		LLVM_DIS="$LLVM_DIS_ARGS" \
-		LLVM=1 \
-		CC=clang \
-		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
-		CLANG_TRIPLE=$TRIPLE \
-		CROSS_COMPILE="$CROSS" \
-		CROSS_COMPILE_ARM32="$CROSS_ARM32" &>compile2.log
+	make_common 2
 }
 
 builder_aosp() {
