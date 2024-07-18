@@ -641,6 +641,7 @@ struct bt532_ts_info {
 	struct i2c_client				*client;
 	struct input_dev				*input_dev;
 	struct input_dev				*input_dev_proximity;
+	struct input_dev				*input_dev_pad;
 	struct bt532_ts_platform_data	*pdata;
 	char							phys[32];
 	/*struct task_struct				*task;*/
@@ -10001,6 +10002,36 @@ static void zt_set_input_prop_proximity(struct bt532_ts_info *info, struct input
 	input_set_drvdata(dev, info);
 }
 
+static void zs_set_input_prop_pad(struct bt532_ts_info *info, struct input_dev *dev)
+{
+	static char ist_phys[64] = { 0 };
+
+	snprintf(ist_phys, sizeof(ist_phys), "%s/input1", dev->name);
+	dev->phys = ist_phys;
+	dev->id.bustype = BUS_I2C;
+	dev->dev.parent = &info->client->dev;
+
+	set_bit(EV_SYN, dev->evbit);
+	set_bit(EV_KEY, dev->evbit);
+	set_bit(EV_ABS, dev->evbit);
+	set_bit(EV_SW, dev->evbit);
+	set_bit(BTN_TOUCH, dev->keybit);
+	set_bit(BTN_TOOL_FINGER, dev->keybit);
+	set_bit(KEY_BLACK_UI_GESTURE, dev->keybit);
+	set_bit(KEY_INT_CANCEL, dev->keybit);
+
+	set_bit(INPUT_PROP_POINTER, dev->propbit);
+	set_bit(KEY_HOMEPAGE, dev->keybit);
+
+	input_set_abs_params(dev, ABS_MT_POSITION_X, 0, info->pdata->x_resolution, 0, 0);
+	input_set_abs_params(dev, ABS_MT_POSITION_Y, 0, info->pdata->y_resolution, 0, 0);
+	input_set_abs_params(dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+	input_set_abs_params(dev, ABS_MT_TOUCH_MINOR, 0, 255, 0, 0);
+	input_set_abs_params(dev, ABS_MT_CUSTOM, 0, 0xFFFFFFFF, 0, 0);
+
+	input_mt_init_slots(dev, 10, INPUT_MT_POINTER);
+}
+
 static int bt532_ts_probe(struct i2c_client *client,
 		const struct i2c_device_id *i2c_id)
 {
@@ -10103,6 +10134,16 @@ static int bt532_ts_probe(struct i2c_client *client,
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
+
+	info->input_dev_pad = input_allocate_device();
+	if (!info->input_dev_pad) {
+		input_err(true, &client->dev, "%s: allocate device err!\n", __func__);
+		ret = -ENOMEM;
+		goto err_allocate_input_dev_pad;
+	}
+
+	info->input_dev_pad->name = "sec_touchpad";
+	zs_set_input_prop_pad(info, info->input_dev_pad);
 
 	if (pdata->support_ear_detect) {
 		info->input_dev_proximity = input_allocate_device();
@@ -10255,6 +10296,12 @@ static int bt532_ts_probe(struct i2c_client *client,
 		}
 	}
 
+	ret = input_register_device(info->input_dev_pad);
+	if (ret) {
+		input_err(true, &client->dev, "%s: Unable to register %s input device\n", __func__, info->input_dev_pad->name);
+		goto err_input_pad_register_device;
+	}
+
 	if(init_touch(info) == false) {
 		ret = -EPERM;
 		goto err_init_touch;
@@ -10357,6 +10404,8 @@ err_misc_register:
 err_request_irq:
 error_gpio_irq:
 err_init_touch:
+	input_unregister_device(info->input_dev_pad);
+err_input_pad_register_device:
 	if (pdata->support_ear_detect)
 		input_unregister_device(info->input_dev_proximity);
 err_input_proximity_register_device:
@@ -10370,6 +10419,9 @@ err_esd_sequence:
 err_power_sequence:
 	bt532_power_control(info, POWER_OFF);
 err_get_pinctrl:
+	input_free_device(info->input_dev_pad);
+	info->input_dev_pad = NULL;
+err_allocate_input_dev_pad:
 	if (pdata->support_ear_detect) {
 		input_free_device(info->input_dev_proximity);
 		info->input_dev_proximity = NULL;
