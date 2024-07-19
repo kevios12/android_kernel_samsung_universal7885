@@ -124,7 +124,7 @@ int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
 		pm_qos_update_request(&exynos5_g3d_cpu_cluster0_min_qos, platform->table[platform->step].cpu_little_min_freq);
 
 		if (!platform->boost_is_enabled) {
-			if (platform->env_data.utilization > 35)
+			if (platform->env_data.utilization > 30)
 				pm_qos_update_request(&exynos5_g3d_cpu_cluster1_max_qos, platform->table[platform->step].cpu_big_max_freq);
 			else
 				pm_qos_update_request(&exynos5_g3d_cpu_cluster1_max_qos, PM_QOS_CLUSTER1_FREQ_MAX_DEFAULT_VALUE);
@@ -132,7 +132,7 @@ int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
 #if PM_QOS_CPU_CLUSTER_NUM == 3
 		pm_qos_update_request(&exynos5_g3d_cpu_cluster1_min_qos, platform->table[platform->step].cpu_middle_min_freq);
                 if (!platform->boost_is_enabled) {
-                        if (platform->env_data.utilization > 30)
+                        if (platform->env_data.utilization > 25)
                                 pm_qos_update_request(&exynos5_g3d_cpu_cluster2_max_qos, platform->table[platform->step].cpu_big_max_freq);
                         else
                                 pm_qos_update_request(&exynos5_g3d_cpu_cluster2_max_qos, PM_QOS_CLUSTER2_FREQ_MAX_DEFAULT_VALUE);
