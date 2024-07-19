@@ -33,7 +33,7 @@ static const int cfq_slice_async_rq = 2;
 static int cfq_rt_idle_only = 1;
 static u64 cfq_slice_idle = NSEC_PER_SEC / 125;
 static u64 cfq_group_idle = 1;
-static const u64 cfq_target_latency = (u64)NSEC_PER_SEC * 3/10; /* 300 ms */
+static const u64 cfq_target_latency = (u64)NSEC_PER_SEC * 8/100; /* 80 ms */
 static const int cfq_hist_divisor = 4;
 /* IOPP-cfq_max_async_dispatch-v1.0.4.4 */
 static int cfq_max_async_dispatch = 4;
