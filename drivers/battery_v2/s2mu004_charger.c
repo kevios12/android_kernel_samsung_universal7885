@@ -48,10 +48,16 @@
 #define EN_TEST_READ 1
 #endif
 
+#ifdef CONFIG_USB_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
 #define ENABLE 1
 #define DISABLE 0
 
 #define IVR_WORK_DELAY 50
+
+#define USB_FAST_CHARGE_SPEED 1200000 // 1200mA
 
 static struct device_attribute s2mu004_charger_attrs[] = {
 	S2MU004_CHARGER_ATTR(chip_id),
@@ -1028,7 +1034,11 @@ static int s2mu004_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		{
 			int input_current = val->intval;
-
+#ifdef CONFIG_USB_FAST_CHARGE
+			if (force_fast_charge > 0 && input_current < USB_FAST_CHARGE_SPEED) {
+				input_current = USB_FAST_CHARGE_SPEED;
+			}
+#endif
 			s2mu004_set_input_current_limit(charger, input_current);
 			charger->input_current = input_current;
 		}
@@ -1037,6 +1047,11 @@ static int s2mu004_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		pr_info("[DEBUG] %s: is_charging %d\n", __func__, charger->is_charging);
 		charger->charging_current = val->intval;
+#ifdef CONFIG_USB_FAST_CHARGE
+		if (force_fast_charge > 0 && charger->charging_current < USB_FAST_CHARGE_SPEED) {
+			charger->charging_current = USB_FAST_CHARGE_SPEED;
+		}
+#endif
 		/* set charging current */
 		s2mu004_set_fast_charging_current(charger, charger->charging_current);
 #if EN_TEST_READ
