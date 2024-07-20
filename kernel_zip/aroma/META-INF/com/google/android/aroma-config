@@ -31,7 +31,7 @@
 ini_set("force_colorspace", "rgba");
 
 ini_set("rom_name",    "Nameless Kernel");
-ini_set("rom_version", "V3");
+ini_set("rom_version", "V3.5");
 ini_set("rom_author",  "Nameless Team");
 ini_set("rom_device",  "Samsung Galaxy A40/A30s/A8 2018");
 ini_set("rom_date",    "NULL");
@@ -67,8 +67,8 @@ viewbox(
 "\n\n"+
 "<b><#selectbg_g> Information about Nameless Kernel</#></b>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"+
 "<b>Kernel Name  \t\t: <#selectbg_g>Nameless Kernel</#></b>\n\n"+
-"<b>Kernel Version \t\t: <#selectbg_g>V3</#></b>\n\n"+
-"<b>Kernel Release \t: <#selectbg_g>2024/07/16</#></b>\n\n"+
+"<b>Kernel Version \t\t: <#selectbg_g>V3.5</#></b>\n\n"+
+"<b>Kernel Release \t: <#selectbg_g>2024/07/20</#></b>\n\n"+
 "<b>Kernel Devs \t\t: <#selectbg_g>Nameless Team</#></b>\n\n"+
 "<b>Booted Device \t\t: <#selectbg_g>sysprop</#></b>\n\n\n\n\n\n\n\n\n\n\n"+
 "\t<b>Click on Next to Proceed</b>",

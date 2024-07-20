@@ -1,3 +1,18 @@
+V3.5 Changelog:
+################
+→ fix DexTouchpad (A40) - Thanks to @roynatech
+→ implement Battery Protection for OneUI
+→ fix DT2W (A30s)
+→ fix mass_storage name to get DriveDroid working
+→ implement, enable USB2.0 Force FastCharging for Computers
+→ disable/silence again more logging stuff
+→ upstream, optimize CFQ IOSCHED
+→ upstream mbcache, ashmem
+→ try to improve Performance and to reduce Battery drain
+→ try to reduce latency
+→ reduced a little bit the Kernel size
+→ misc optimizations in various categories: filesystem, memory, kallsyms, ...
+
 V3 Changelog:
 ################
 → add A30s to Support list

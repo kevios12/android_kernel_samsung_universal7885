@@ -12,10 +12,13 @@ Nameless Features:
 → AROMA Installer
 → Disabled a lot of Debug / Logging and Traces stuff for Performance
 → Smooth Experience
-→ BFQ I/O Scheduler
+→ BFQ I/O Scheduler, Optimized CFQ I/O Scheduler
 → using instead of URANDOM -> SRANDOM (gains 500% on /dev/random)
 → Stable and Optimized Kernel
 → Charging ETA on OneUI based ROM's
 → cpu_input_boost adapted for our SOC
 → Fast LZ4 compressor (lz4fast, crypto algorithm)
 → SamsungDex Support
+→ Battery Protection for OneUI6+
+→ DriveDroid Support
+→ USB2.0 Force FastCharging for Computer
