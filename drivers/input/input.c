@@ -784,6 +784,28 @@ static void input_booster_init(void)
 				err |= of_property_read_u32_index(cnp, "input_booster,head_times", i, &temp); dt_infor->param_tables[i].head_time = (u16)temp;
 				err |= of_property_read_u32_index(cnp, "input_booster,tail_times", i, &temp); dt_infor->param_tables[i].tail_time = (u16)temp;
 				err |= of_property_read_u32_index(cnp, "input_booster,phase_times", i, &temp); dt_infor->param_tables[i].phase_time = (u16)temp;
+
+				// Handle hardcoding for booster_key@
+				if (dt_infor->type == 0) {
+					dt_infor->param_tables[i].cpu_freq = 1586000;
+					dt_infor->param_tables[i].kfc_freq = 839000;
+					dt_infor->param_tables[i].hmp_boost = 1;
+					dt_infor->param_tables[i].head_time = 500;
+					dt_infor->param_tables[i].tail_time = 500;
+				} else if (dt_infor->type == 1) {
+					dt_infor->param_tables[i].cpu_freq = 1586000;
+					dt_infor->param_tables[i].kfc_freq = 839000;
+					dt_infor->param_tables[i].hmp_boost = 1;
+					dt_infor->param_tables[i].head_time = 0;
+					dt_infor->param_tables[i].tail_time = 200;
+				} else if (dt_infor->type == 9) {
+					dt_infor->param_tables[i].cpu_freq = 1352000;
+					dt_infor->param_tables[i].kfc_freq = 839000;
+					dt_infor->param_tables[i].hmp_boost = 1;
+					dt_infor->param_tables[i].head_time = 700;
+					dt_infor->param_tables[i].tail_time = 700;
+				}
+
 				if (err) {
 					printk("Failed to get [%d] param table property\n", i);
 				}

@@ -1217,12 +1217,30 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 	 * then they will be used.
 	 */
 	if (!of_property_read_u32(dn, "max-freq", &val))
-		domain->max_freq = val;
+		if (domain->id == 0) {
+			domain->max_freq = 1690000;
+		} else if (domain->id == 1) {
+			domain->max_freq = 2080000;
+		}
+
 	if (!of_property_read_u32(dn, "min-freq", &val))
-		domain->min_freq = val;
+		if (domain->id == 0) {
+			domain->min_freq = 546000;
+		} else if (domain->id == 1) {
+			domain->min_freq = 520000;
+		}
+
 
 	domain->boot_freq = cal_dfs_get_boot_freq(domain->cal_id);
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);
+
+	if (domain->id == 0) {
+		domain->boot_freq = 1586000;
+		domain->resume_freq = 902000;
+	} else if (domain->id == 1) {
+		domain->boot_freq = 1976000;
+		domain->resume_freq = 1144000;
+	}
 
 	/* Initialize freq boost */
 	if (domain->boost_supported) {

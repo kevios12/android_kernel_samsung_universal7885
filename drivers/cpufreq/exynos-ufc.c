@@ -617,10 +617,11 @@ static __init void init_sysfs(void)
 static int parse_ufc_ctrl_info(struct exynos_cpufreq_domain *domain,
 					struct device_node *dn)
 {
-	unsigned int val;
-
-	if (!of_property_read_u32(dn, "user-default-qos", &val))
-		domain->user_default_qos = val;
+	if (domain->id == 0) {
+		domain->user_default_qos = 902000;
+	} else if (domain->id == 1) {
+		domain->user_default_qos = 1144000;
+	}
 
 	return 0;
 }
