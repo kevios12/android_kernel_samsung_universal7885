@@ -256,6 +256,10 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 		platform->interactive.highspeed_clock = of_data_int_array[0] == 0 ? 500 : (u32) of_data_int_array[0];
 		platform->interactive.highspeed_load  = of_data_int_array[1] == 0 ? 100 : (u32) of_data_int_array[1];
 		platform->interactive.highspeed_delay = of_data_int_array[2] == 0 ? 0 : (u32) of_data_int_array[2];
+
+		platform->interactive.highspeed_clock = 1001000;
+		platform->interactive.highspeed_load = 95;
+
 	} else if (!strncmp("static", of_string, strlen("static"))) {
 		platform->governor_type = G3D_DVFS_GOVERNOR_STATIC;
 	} else if (!strncmp("booster", of_string, strlen("booster"))) {
@@ -266,6 +270,9 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 		platform->governor_type = G3D_DVFS_GOVERNOR_DEFAULT;
 	}
 #endif
+
+	/* Hardcode governor instead reading from DTB/DTBO */
+	platform->governor_type = G3D_DVFS_GOVERNOR_ONDEMAND;
 
 	gpu_update_config_data_int(np, "gpu_dvfs_start_clock", &platform->gpu_dvfs_start_clock);
 	gpu_update_config_data_int_array(np, "gpu_dvfs_table_size", of_data_int_array, 2);
@@ -285,11 +292,18 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 	gpu_update_config_data_int(np, "gpu_voltage_offset_margin", &platform->gpu_default_vol_margin);
 	gpu_update_config_data_bool(np, "gpu_tmu_control", &platform->tmu_status);
 	gpu_update_config_data_int(np, "gpu_temp_throttling_level_num", &of_data_int);
-	if (of_data_int == TMU_LOCK_CLK_END)
+	if (of_data_int == TMU_LOCK_CLK_END) {
 		gpu_update_config_data_int_array(np, "gpu_temp_throttling", platform->tmu_lock_clk, TMU_LOCK_CLK_END);
-	else
+		platform->tmu_lock_clk[0] = 1001000;
+		platform->tmu_lock_clk[1] = 845000;
+		platform->tmu_lock_clk[2] = 676000;
+		platform->tmu_lock_clk[3] = 545000;
+		platform->tmu_lock_clk[4] = 450000;
+		platform->tmu_lock_clk[5] = 450000;
+	} else
 		GPU_LOG(DVFS_WARNING, DUMMY, 0u, 0u, "mismatch tmu lock table size: %d, %d\n",
 				of_data_int, TMU_LOCK_CLK_END);
+
 #ifdef CONFIG_CPU_THERMAL_IPA
 	gpu_update_config_data_int(np, "gpu_power_coeff", &platform->ipa_power_coeff_gpu);
 	gpu_update_config_data_int(np, "gpu_dvfs_time_interval", &platform->gpu_dvfs_time_interval);
@@ -301,6 +315,10 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 	gpu_update_config_data_int(np, "gpu_pmqos_mif_max_clock", &platform->pmqos_mif_max_clock);
 	gpu_update_config_data_int(np, "gpu_pmqos_mif_max_clock_base", &platform->pmqos_mif_max_clock_base);
 	gpu_update_config_data_int(np, "gpu_cl_dvfs_start_base", &platform->cl_dvfs_start_base);
+
+	platform->pmqos_mif_max_clock = 0;
+	platform->pmqos_mif_max_clock_base = 0;
+
 #endif /* CONFIG_MALI_DVFS */
 	gpu_update_config_data_bool(np, "gpu_early_clk_gating", &platform->early_clk_gating_status);
 #ifdef CONFIG_MALI_RT_PM
@@ -346,6 +364,12 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 #endif
 	platform->gpu_dss_freq_id = 0;
 	gpu_update_config_data_int(np, "gpu_dss_id_type", &platform->gpu_dss_freq_id);
+
+	/* Hardcode GPU min/max values instead reading from DTB/DTBO */
+	platform->gpu_max_clock_limit = 1100000;
+	platform->gpu_max_clock = 1100000;
+	platform->gpu_dvfs_start_clock = 450000;
+	platform->gpu_min_clock = 450000;
 
 	return 0;
 }

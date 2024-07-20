@@ -114,17 +114,13 @@ static int exynos7885_devfreq_disp_set_freq(struct device *dev, u32 new_freq,
 
 static int exynos7885_devfreq_disp_init_freq_table(struct exynos_devfreq_data *data)
 {
-	u32 max_freq, min_freq;
+	u32 max_freq = 333000;
+	u32 min_freq = 167000;
 	unsigned long tmp_max, tmp_min;
 	struct dev_pm_opp *target_opp;
 	u32 flags = 0;
 	int i;
 
-#ifdef USE_MIN_MAX_FREQ_FROM_DT
-	max_freq = data->max_freq;
-#else
-	max_freq = (u32)cal_dfs_get_max_freq(data->dfs_id);
-#endif
 	if (!max_freq) {
 		dev_err(data->dev, "failed to get max frequency\n");
 		return -EINVAL;
@@ -149,14 +145,9 @@ static int exynos7885_devfreq_disp_init_freq_table(struct exynos_devfreq_data *d
 	}
 
 	/* min ferquency must be equal or under max frequency */
-	if (data->min_freq > data->max_freq)
-		data->min_freq = data->max_freq;
+	if (min_freq > max_freq)
+		min_freq = max_freq;
 
-#ifdef USE_MIN_MAX_FREQ_FROM_DT
-	min_freq = data->min_freq;
-#else
-	min_freq = (u32)cal_dfs_get_min_freq(data->dfs_id);
-#endif
 	if (!min_freq) {
 		dev_err(data->dev, "failed to get min frequency\n");
 		return -EINVAL;
@@ -181,11 +172,11 @@ static int exynos7885_devfreq_disp_init_freq_table(struct exynos_devfreq_data *d
 	}
 
 	dev_info(data->dev, "min_freq: %uKhz, max_freq: %uKhz\n",
-			data->min_freq, data->max_freq);
+			data->min_freq, max_freq);
 
 	for (i = 0; i < data->max_state; i++) {
-		if (data->opp_list[i].freq > data->max_freq ||
-			data->opp_list[i].freq < data->min_freq)
+		if (data->opp_list[i].freq > max_freq ||
+			data->opp_list[i].freq < min_freq)
 			dev_pm_opp_disable(data->dev, (unsigned long)data->opp_list[i].freq);
 	}
 

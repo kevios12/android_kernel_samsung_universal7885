@@ -11460,6 +11460,9 @@ core_initcall(register_sched_cpufreq_notifier);
 
 #endif /* CONFIG_HMP_FREQUENCY_INVARIANT_SCALE */
 
+#define UP_THRESHOLD 256
+#define DOWN_THRESHOLD 64
+
 #if defined(CONFIG_SCHED_HMP)
 static int __init hmp_param_init(void)
 {
@@ -11473,19 +11476,15 @@ static int __init hmp_param_init(void)
 		return -ENOENT;
 	}
 
-	if (of_property_read_u32(hmp_param_node,
-				"up_threshold", &hmp_up_threshold))
-		pr_warn("%s missing up_threshold property\n",__func__);
+	hmp_up_threshold = UP_THRESHOLD;
+		pr_warn("%s missing up_threshold property\n",__func__, hmp_up_threshold);
 
-	if (of_property_read_u32(hmp_param_node,
-				"down_threshold", &hmp_down_threshold))
-		pr_warn("%s missing down_threshold property\n",__func__);
+	hmp_down_threshold = DOWN_THRESHOLD;
+		pr_warn("%s missing down_threshold property\n",__func__, hmp_down_threshold);
 
-	if (!of_property_read_u32(hmp_param_node,
-				"bootboost-duration-us", &duration)) {
+	duration = BOOT_BOOST_DURATION;
 		hmp_boostpulse_endtime = ktime_to_us(ktime_get()) + duration;
 		pr_info("hmp_boostpulse_endtime is set(%llu)\n",hmp_boostpulse_endtime);
-	}
 
 	if (of_property_read_u32(hmp_param_node,
 			"semiboost_up_threshold",&hmp_semiboost_up_threshold))
@@ -11696,6 +11695,12 @@ static void hmp_tbsoftlanding_update_thr(void)
 			hmp_tbsoftlanding.threshold + (temp * (TBSL_LV_END - lv - 1));
 }
 
+/* Define the hardcoded values */
+#define DOWN_COMPENSATION_TIMEOUT 0
+#define DOWN_COMPENSATION_HIGH_FREQ 0
+#define DOWN_COMPENSATION_MID_FREQ 0
+#define DOWN_COMPENSATION_LOW_FREQ 0
+
 static int __init hmp_tbsoftlanding_init(void)
 {
 	struct device_node *hmp_param_node;
@@ -11709,21 +11714,17 @@ static int __init hmp_tbsoftlanding_init(void)
 		return -ENOENT;
 	}
 
-	if (of_property_read_u32(hmp_param_node, "down_compensation_timeout",
-					&hmp_tbsoftlanding.timeout))
-		pr_warn("%s missing hmp tbsoftlanding_timeout property\n",__func__);
+    	hmp_tbsoftlanding.timeout = DOWN_COMPENSATION_TIMEOUT;
+		pr_warn("%s missing hmp tbsoftlanding_timeout property\n",__func__, hmp_tbsoftlanding.timeout);
 
-	if (of_property_read_u32(hmp_param_node, "down_compensation_high_freq",
-					&hmp_tbsoftlanding.data[TBSL_LV_HIGH].freq))
-		pr_warn("%s missing hmp tbsoftlanding_high_freq property\n",__func__);
+    	hmp_tbsoftlanding.data[TBSL_LV_HIGH].freq = DOWN_COMPENSATION_HIGH_FREQ;
+		pr_warn("%s missing hmp tbsoftlanding_high_freq property\n",__func__, hmp_tbsoftlanding.data[TBSL_LV_HIGH].freq);
 
-	if (of_property_read_u32(hmp_param_node, "down_compensation_mid_freq",
-					&hmp_tbsoftlanding.data[TBSL_LV_MID].freq))
-		pr_warn("%s missing hmp tbsoftlanding_mid_freq property\n",__func__);
+    	hmp_tbsoftlanding.data[TBSL_LV_MID].freq = DOWN_COMPENSATION_MID_FREQ;
+		pr_warn("%s missing hmp tbsoftlanding_mid_freq property\n",__func__, hmp_tbsoftlanding.data[TBSL_LV_MID].freq);
 
-	if (of_property_read_u32(hmp_param_node, "down_compensation_low_freq",
-					&hmp_tbsoftlanding.data[TBSL_LV_LOW].freq))
-		pr_warn("%s missing hmp tbsoftlanding_low_freq property\n",__func__);
+	hmp_tbsoftlanding.data[TBSL_LV_LOW].freq = DOWN_COMPENSATION_LOW_FREQ;
+		pr_warn("%s missing hmp tbsoftlanding_low_freq property\n",__func__, hmp_tbsoftlanding.data[TBSL_LV_LOW].freq);
 
 	/*
 	 * calculate threshold. base threshold is half of down threshold

@@ -138,7 +138,14 @@ static int exynos7885_devfreq_int_init_freq_table(struct exynos_devfreq_data *da
 	u32 flags = 0;
 	int i, ret = 0;
 
-	max_freq = (u32)cal_dfs_get_max_freq(data->dfs_id);
+	const u32 initial_freq = 533000;
+	const u32 default_qos = 178000;
+	const u32 suspend_freq = 107000;
+	const u32 min_freq_dts = 107000;
+	const u32 max_freq_dts = 533000;
+	const u32 reboot_freq = 533000;
+
+	max_freq = max_freq_dts;
 	if (!max_freq) {
 		dev_err(data->dev, "failed get max frequency\n");
 		return -EINVAL;
@@ -166,7 +173,7 @@ static int exynos7885_devfreq_int_init_freq_table(struct exynos_devfreq_data *da
 	if (data->min_freq > data->max_freq)
 		data->min_freq = data->max_freq;
 
-	min_freq = (u32)cal_dfs_get_min_freq(data->dfs_id);
+	min_freq = min_freq_dts;
 	if (!min_freq) {
 		dev_err(data->dev, "failed get min frequency\n");
 		return -EINVAL;
@@ -198,6 +205,9 @@ static int exynos7885_devfreq_int_init_freq_table(struct exynos_devfreq_data *da
 			data->opp_list[i].freq < data->min_freq)
 			dev_pm_opp_disable(data->dev, (unsigned long)data->opp_list[i].freq);
 	}
+
+	data->devfreq_profile.initial_freq = initial_freq;
+	data->devfreq_profile.suspend_freq = suspend_freq;
 
 	ret = exynos_acpm_set_init_freq(data->dfs_id, data->devfreq_profile.initial_freq);
 	if (ret) {
