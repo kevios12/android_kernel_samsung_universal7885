@@ -470,6 +470,7 @@ make_common() {
 		ARCH=arm64 \
 		LLVM_DIS="$LLVM_DIS_ARGS" \
 		LLVM=1 \
+		LLVM_IAS=1 \
 		CC=clang \
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
