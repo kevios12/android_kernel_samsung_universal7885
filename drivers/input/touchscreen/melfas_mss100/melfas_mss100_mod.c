@@ -605,7 +605,7 @@ int mms_custom_event_handler(struct mms_ts_info *info, u8 *rbuf, u8 size)
 				input_sync(info->input_dev);
 			} else if (gesture_id == MMS_GESTURE_ID_DOUBLETAP_TO_WAKEUP) {
 				input_info(true, &info->client->dev, "%s: AOT\n", __func__);
-} else if (gesture_id == MMS_GESTURE_ID_DOUBLETAP_TO_WAKEUP) {
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_MTP
 				input_report_key(info->input_dev, KEY_HOMEPAGE, 1);
 #else
 				input_report_key(info->input_dev, KEY_WAKEUP, 1);
