@@ -209,19 +209,11 @@ toolchain() {
 	fi
 }
 
-revert_python2() {
-	git revert --no-edit 7bce8872f589a1a61acc9dffc902f894fa973fbb > /dev/null || true
-}
-
 select_device() {
 	echo -e "${GREEN}Please select your Device${NC}\n"
 	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
 		case "$devices" in
 		"Galaxy A40 (a40)")
-			clear
-			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			revert_python2
-			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
 			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
@@ -266,10 +258,6 @@ select_device() {
 			;;
 		"Galaxy A30s (a30s)")
 			clear
-			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			revert_python2
-			sleep 2
-			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
 			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
@@ -312,10 +300,6 @@ select_device() {
 			done
 			;;
 		"Galaxy A30 (a30)")
-			clear
-			echo -e "${RED}Revert to Python2 for DTB/DTBO Built [its broken af]${NC}"
-			revert_python2
-			sleep 2
 			clear
 			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
 			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
@@ -411,17 +395,6 @@ select_device() {
 			;;
 		esac
 	done
-}
-
-python3_2() {
-	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
-		echo -e "${RED}Revert back to Python3 DTB/DTBO Build${NC}\n"
-		git reset HEAD~1
-		git restore scripts
-		sleep 2
-	elif [ "$codename" = "jackpotlte" ]; then
-		echo -e "${RED}Unsupported!${NC}"
-	fi
 }
 
 compile_text() {
@@ -523,29 +496,39 @@ builder_oneui() {
 
 copy_oneui() {
 	cp out/arch/arm64/boot/Image "$ANYKERNEL/oneui/permissive/"
-	cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/permissive/"
 	cp out2/arch/arm64/boot/Image "$ANYKERNEL/oneui/enforce/"
-	cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/enforce/"
-	if [ "$codename" = "a40" ]; then
+	if [[ "$codename" = "a40" || "$codename" == "a30s" ]]; then
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/enforce/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/permissive/"
-	elif [[ "$codename" == "a30s" || "$codename" == "a30" ]]; then
-		cp out2/arch/arm64/boot/dtbo.img "$ANYKERNEL/oneui/enforce/"
-		cp out/arch/arm64/boot/dtbo.img "$ANYKERNEL/oneui/permissive/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/permissive/dtb.img"
+	elif [ "$codename" = "a30" ]; then
+		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/oneui/enforce/"
+		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/oneui/permissive/"
+		cp $ANYKERNEL/prebuilt/a30/dtb_enf.img "$ANYKERNEL/oneui/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/a30/dtb_perm.img "$ANYKERNEL/oneui/permissive/dtb.img"
+	elif [ "$codename" = "jackpotlte" ]; then
+		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/enforce/"
+		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/permissive/"
 	fi
 }
 
 copy_aosp() {
 	cp out/arch/arm64/boot/Image "$ANYKERNEL/aosp/permissive/"
-	cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/permissive/"
 	cp out2/arch/arm64/boot/Image "$ANYKERNEL/aosp/enforce/"
-	cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/enforce/"
-	if [ "$codename" = "a40" ]; then
+	if [[ "$codename" = "a40" || "$codename" == "a30s" ]]; then
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/enforce/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/permissive/"
-	elif [[ "$codename" == "a30s" || "$codename" == "a30" ]]; then
-		cp out2/arch/arm64/boot/dtbo.img "$ANYKERNEL/aosp/enforce/"
-		cp out/arch/arm64/boot/dtbo.img "$ANYKERNEL/aosp/permissive/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/permissive/dtb.img"
+	elif [ "$codename" = "a30" ]; then
+		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/aosp/enforce/"
+		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/aosp/permissive/"
+		cp $ANYKERNEL/prebuilt/a30/dtb_enf.img "$ANYKERNEL/aosp/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/a30/dtb_perm.img "$ANYKERNEL/aosp/permissive/dtb.img"
+	elif [ "$codename" = "jackpotlte" ]; then
+		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/enforce/"
+		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/permissive/"
 	fi
 }
 
@@ -638,8 +621,6 @@ aroma() {
 	cp "$SRCTREE/kernel_zip/aroma/$AROMA_FILENAME" "$SRCTREE/kernel_zip/"
 	cd "$SRCTREE" || exit
 	clear
-	python3_2
-	clear
 	echo -e "${GREEN}AROMA Installer created: $AROMA_FILENAME and saved in $SRCTREE/kernel_zip/${NC}\n"
 	build_text
 	tg_upload
@@ -661,8 +642,6 @@ pack_aosp() {
 	find "$ANYKERNEL/aosp" -type f -name "*.zip" -exec cp -t "$SRCTREE/kernel_zip" {} +
 	cd "$SRCTREE" || exit
 	clear
-	python3_2
-	clear
 	build_text
 	tg_upload
 }
@@ -682,8 +661,6 @@ pack_oneui() {
 	done
 	find "$ANYKERNEL/oneui" -type f -name "*.zip" -exec cp -t "$SRCTREE/kernel_zip" {} +
 	cd "$SRCTREE" || exit
-	clear
-	python3_2
 	clear
 	build_text
 	tg_upload
