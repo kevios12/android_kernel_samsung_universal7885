@@ -24,6 +24,8 @@
 #include <gpex_utils.h>
 #include <gpex_clboost.h>
 
+#include <linux/throttle_limit.h>
+
 #include "gpex_clock_internal.h"
 
 static struct _clock_info *clk_info;
@@ -154,6 +156,9 @@ GPEX_STATIC ssize_t set_max_lock_dvfs(const char *buf, size_t count)
 			GPU_LOG(MALI_EXYNOS_WARNING, "%s: invalid value\n", __func__);
 			return -ENOENT;
 		}
+
+		if (clock < get_gpu_throttle_limit())
+			clock = get_gpu_throttle_limit();
 
 		clk_info->user_max_lock_input = clock;
 
