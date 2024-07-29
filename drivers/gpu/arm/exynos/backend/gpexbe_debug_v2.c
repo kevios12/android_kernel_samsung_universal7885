@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
+/*
+ * (C) COPYRIGHT 2021 Samsung Electronics Inc. All rights reserved.
+ *
+ * This program is free software and is provided to you under the terms of the
+ * GNU General Public License version 2 as published by the Free Software
+ * Foundation, and any use by you of this program is subject to the terms
+ * of such GNU licence.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, you can access it online at
+ * http://www.gnu.org/licenses/gpl-2.0.html.
+ */
+
+#include <linux/exynos-ss.h>
+
+#include <gpexbe_debug.h>
+#include <gpexbe_devicetree.h>
+
+#include <gpex_utils.h>
+
+struct _debug_backend_info {
+	int dss_freq_id;
+};
+
+static struct _debug_backend_info dbg_info;
+
+void gpexbe_debug_dbg_snapshot_thermal(int frequency)
+{
+	return;
+}
+
+void gpexbe_debug_dbg_snapshot_freq_in(int freq_before, int freq_after)
+{
+#ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
+        if (dbg_info.dss_freq_id)
+#ifdef CONFIG_SOC_EXYNOS9820
+                dbg_snapshot_freq_misc(dbg_info.dss_freq_id, freq_before, freq_after, DSS_FLAG_IN);
+#else
+                dbg_snapshot_freq(dbg_info.dss_freq_id, freq_before, freq_after, DSS_FLAG_IN);
+#endif
+#endif
+}
+
+void gpexbe_debug_dbg_snapshot_freq_out(int freq_before, int freq_after)
+{
+#ifdef CONFIG_DEBUG_SNAPSHOT_FREQ
+        if (dbg_info.dss_freq_id)
+#ifdef CONFIG_SOC_EXYNOS9820
+                dbg_snapshot_freq_misc(dbg_info.dss_freq_id, freq_before, freq_after, DSS_FLAG_OUT);
+#else
+                dbg_snapshot_freq(dbg_info.dss_freq_id, freq_before, freq_after, DSS_FLAG_OUT);
+#endif
+#endif
+}
+
+int gpexbe_debug_init(void)
+{
+	/* this value is 0 for 9830 */
+	/* TODO: find out what's going on with 9830. dbg snapshot was never used? */
+	dbg_info.dss_freq_id = gpexbe_devicetree_get_int(gpu_ess_id_type);
+
+	gpex_utils_get_exynos_context()->dbg_info = &dbg_info;
+
+	return 0;
+}
+
+void gpexbe_debug_term(void)
+{
+	dbg_info.dss_freq_id = 0;
+}

@@ -728,7 +728,7 @@ static void suspend_handler_thread(struct work_struct *suspend_handler_work)
 	set_suspend_cpufreq();
 #endif
 	update_gov_tunables();
-	set_gpu_policy();
+	//set_gpu_policy();
 }
 static DECLARE_WORK(suspend_handler_work, suspend_handler_thread);
 
@@ -794,7 +794,7 @@ blank_exit:
 	decon_hiber_unblock(decon);
 	decon_info("%s - blank_mode: %d, %d\n", __func__, blank_mode, ret);
 
-	set_gpu_policy();
+	//set_gpu_policy();
 
 	if (blank_mode == FB_BLANK_UNBLANK)
 		is_suspend = false;
