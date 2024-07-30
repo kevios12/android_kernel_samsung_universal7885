@@ -140,6 +140,9 @@ static int gpu_dvfs_governor_default(int utilization)
 
 static int gpu_dvfs_governor_interactive(int utilization)
 {
+	const int highspeed_clock = 1001000;
+	const int highspeed_load = 95;
+
 	if ((dvfs->step > gpex_clock_get_table_idx(gpex_clock_get_max_clock())) &&
 	    (utilization > dvfs->table[dvfs->step].max_threshold)) {
 		int highspeed_level = gpex_clock_get_table_idx(dvfs->interactive.highspeed_clock);
@@ -517,11 +520,11 @@ int gpu_dvfs_governor_setting_locked(int governor_type)
 
 int gpu_dvfs_governor_init(struct dvfs_info *_dvfs)
 {
-	int governor_type = G3D_DVFS_GOVERNOR_DEFAULT;
+	int governor_type = G3D_DVFS_GOVERNOR_INTERACTIVE;
 
 	dvfs = _dvfs;
 
-	governor_type = dvfs->governor_type;
+	//governor_type = dvfs->governor_type;
 
 	if (gpu_dvfs_governor_setting(governor_type) < 0) {
 		GPU_LOG(MALI_EXYNOS_WARNING, "%s: fail to initialize governor\n", __func__);

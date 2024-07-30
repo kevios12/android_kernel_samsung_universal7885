@@ -93,10 +93,10 @@ static int gpex_clock_update_config_data_from_dt(void)
 	int i, j;
 	int new_size;
 
-	clk_info.gpu_max_clock = gpexbe_devicetree_get_int(gpu_max_clock);
-	clk_info.gpu_min_clock = gpexbe_devicetree_get_int(gpu_min_clock);
-	clk_info.boot_clock = gpexbe_clock_get_boot_freq();
-	clk_info.gpu_max_clock_limit = gpexbe_clock_get_max_freq();
+	clk_info.gpu_max_clock = 1100000;
+	clk_info.gpu_min_clock = 450000;
+	clk_info.boot_clock = 450000;
+	clk_info.gpu_max_clock_limit = 1100000;
 
 	/* TODO: rename the table_size variable to something more sensible like  row_cnt */
 	new_size = gpexbe_devicetree_get_int(gpu_dvfs_table_size.row);
