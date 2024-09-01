@@ -73,6 +73,8 @@ static void gpex_dvfs_context_init(struct device **dev)
 		dvfs.governor_type = G3D_DVFS_GOVERNOR_BOOSTER;
 	} else if (!strncmp("dynamic", of_string, strlen("dynamic"))) {
 		dvfs.governor_type = G3D_DVFS_GOVERNOR_DYNAMIC;
+        } else if (!strncmp("ondemand", of_string, strlen("ondemand"))) {
+                dvfs.governor_type = G3D_DVFS_GOVERNOR_ONDEMAND;
 	} else {
 		dvfs.governor_type = G3D_DVFS_GOVERNOR_DEFAULT;
 	}

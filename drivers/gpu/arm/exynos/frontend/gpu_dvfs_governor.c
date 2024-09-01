@@ -64,12 +64,19 @@ int gpex_dvfs_set_clock_callback(void)
 typedef int (*GET_NEXT_LEVEL)(int utilization);
 static GET_NEXT_LEVEL gpu_dvfs_get_next_level;
 
+/* for ondemand gov */
+extern unsigned int gpu_up_threshold;
+extern bool gpu_boost;
+extern unsigned int gpu_down_threshold;
+extern void calc_gpu_down_threshold(void);
+
 static int gpu_dvfs_governor_default(int utilization);
 static int gpu_dvfs_governor_interactive(int utilization);
 static int gpu_dvfs_governor_joint(int utilization);
 static int gpu_dvfs_governor_static(int utilization);
 static int gpu_dvfs_governor_booster(int utilization);
 static int gpu_dvfs_governor_dynamic(int utilization);
+static int gpu_dvfs_governor_ondemand(int utilization);
 
 static gpu_dvfs_governor_info governor_info[G3D_MAX_GOVERNOR_NUM] = {
 	{
@@ -102,6 +109,11 @@ static gpu_dvfs_governor_info governor_info[G3D_MAX_GOVERNOR_NUM] = {
 		"Dynamic",
 		gpu_dvfs_governor_dynamic,
 	},
+        {
+                G3D_DVFS_GOVERNOR_ONDEMAND,
+                "Ondemand",
+                gpu_dvfs_governor_ondemand,
+        },
 };
 
 void gpu_dvfs_update_start_clk(int governor_type, int clk)
@@ -140,8 +152,8 @@ static int gpu_dvfs_governor_default(int utilization)
 
 static int gpu_dvfs_governor_interactive(int utilization)
 {
-	const int highspeed_clock = 1001000;
-	const int highspeed_load = 95;
+//	const int highspeed_clock = 1001000;
+//	const int highspeed_load = 95;
 
 	if ((dvfs->step > gpex_clock_get_table_idx(gpex_clock_get_max_clock())) &&
 	    (utilization > dvfs->table[dvfs->step].max_threshold)) {
@@ -439,6 +451,42 @@ static int gpu_dvfs_governor_dynamic(int utilization)
 	return 0;
 }
 
+static int gpu_dvfs_governor_ondemand(int utilization)
+{
+        int max_clock_lev = gpex_clock_get_table_idx(gpex_clock_get_max_clock());
+        int min_clock_lev = gpex_clock_get_table_idx(gpex_clock_get_min_clock());
+
+	/* Check for frequency increase */
+	if (utilization >= gpu_up_threshold) {
+
+		/* if we are already at full speed then break out early */
+		if (dvfs->step == max_clock_lev)
+			return 0;
+
+		if (!gpu_boost)
+			dvfs->step--;
+		else
+			dvfs->step = max_clock_lev;
+
+		return 0;
+	}
+
+	/*
+	 * if we cannot reduce the frequency anymore, break out early
+	 */
+	if (dvfs->step == min_clock_lev)
+		return 0;
+
+	/* Check for frequency decrease */
+	if (utilization <= gpu_down_threshold)
+		dvfs->step++;
+
+        DVFS_ASSERT((dvfs->step >= gpex_clock_get_table_idx(gpex_clock_get_max_clock())) &&
+                    (dvfs->step <= gpex_clock_get_table_idx(gpex_clock_get_min_clock())));
+
+	return 0;
+}
+
 int gpu_dvfs_decide_next_freq(int utilization)
 {
 	unsigned long flags;
@@ -520,9 +568,12 @@ int gpu_dvfs_governor_setting_locked(int governor_type)
 
 int gpu_dvfs_governor_init(struct dvfs_info *_dvfs)
 {
-	int governor_type = G3D_DVFS_GOVERNOR_INTERACTIVE;
+	int governor_type = G3D_DVFS_GOVERNOR_ONDEMAND;
 
 	dvfs = _dvfs;
+
+	/* init gpu down threshold */
+	calc_gpu_down_threshold();
 
 	//governor_type = dvfs->governor_type;
 

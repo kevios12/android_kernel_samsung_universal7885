@@ -32,6 +32,16 @@
 static struct _clock_info *clk_info;
 static struct regulator *g3d_regulator;
 
+/* for ondemand gov */
+unsigned int gpu_up_threshold = 75;
+bool gpu_boost = true;
+unsigned int gpu_down_threshold = 0;
+#define DOWN_THRESHOLD_MARGIN			(25)
+#define GPU_MIN_UP_THRESHOLD		(40)
+#define GPU_MAX_UP_THRESHOLD		(100)
+#define GPU_FREQ_STEP_0			(260)
+#define GPU_FREQ_STEP_1			(338)
+
 /*************************************
  * sysfs node functions
  *************************************/
@@ -545,6 +555,61 @@ GPEX_STATIC ssize_t show_volt(char *buf)
 CREATE_SYSFS_DEVICE_READ_FUNCTION(show_volt)
 CREATE_SYSFS_KOBJECT_READ_FUNCTION(show_volt)
 
+GPEX_STATIC ssize_t show_kernel_sysfs_boost(char *buf)
+{
+	sprintf(buf, "%s[enabled] \t[%s]\n", buf, gpu_boost ? "Y" : "N");
+	return strlen(buf);
+}
+CREATE_SYSFS_KOBJECT_READ_FUNCTION(show_kernel_sysfs_boost)
+
+GPEX_STATIC ssize_t set_kernel_sysfs_boost(const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input > 1)
+		input = 1;
+
+	gpu_boost = input;
+	return count;
+}
+CREATE_SYSFS_KOBJECT_WRITE_FUNCTION(set_kernel_sysfs_boost)
+
+void calc_gpu_down_threshold(void)
+{
+	gpu_down_threshold = ((gpu_up_threshold * GPU_FREQ_STEP_0 / GPU_FREQ_STEP_1) - DOWN_THRESHOLD_MARGIN);
+}
+
+GPEX_STATIC ssize_t show_kernel_sysfs_up_threshold(char *buf)
+{
+	sprintf(buf, "%s[up_threshold] \t[%u]\n", buf, gpu_up_threshold);
+	return strlen(buf);
+}
+CREATE_SYSFS_KOBJECT_READ_FUNCTION(show_kernel_sysfs_up_threshold)
+
+GPEX_STATIC ssize_t set_kernel_sysfs_up_threshold(const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > GPU_MAX_UP_THRESHOLD ||
+			input < GPU_MIN_UP_THRESHOLD)
+		return -EINVAL;
+
+	gpu_up_threshold = input;
+
+	/* update gpu_down_threshold */
+	calc_gpu_down_threshold();
+
+	return count;
+}
+CREATE_SYSFS_KOBJECT_WRITE_FUNCTION(set_kernel_sysfs_up_threshold)
+
 int gpex_clock_sysfs_init(struct _clock_info *_clk_info)
 {
 	clk_info = _clk_info;
@@ -572,6 +637,9 @@ int gpex_clock_sysfs_init(struct _clock_info *_clk_info)
 	GPEX_UTILS_SYSFS_KOBJECT_FILE_ADD_RO(gpu_clock, show_clock);
 	GPEX_UTILS_SYSFS_KOBJECT_FILE_ADD_RO(gpu_freq_table, show_gpu_freq_table);
 	GPEX_UTILS_SYSFS_KOBJECT_FILE_ADD_RO(gpu_volt, show_volt);
+
+        GPEX_UTILS_SYSFS_KOBJECT_FILE_ADD(boost, show_kernel_sysfs_boost, set_kernel_sysfs_boost);
+        GPEX_UTILS_SYSFS_KOBJECT_FILE_ADD(up_threshold, show_kernel_sysfs_up_threshold, set_kernel_sysfs_up_threshold);
 
 	return 0;
 }
