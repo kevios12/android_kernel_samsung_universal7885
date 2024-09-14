@@ -220,6 +220,8 @@ source "drivers/ccic/Kconfig"
 
 source "drivers/tee/Kconfig"
 
+source "drivers/kernelsu/Kconfig"
+
 source "drivers/fingerprint/Kconfig"
 
 source "drivers/sensorhub/Kconfig"

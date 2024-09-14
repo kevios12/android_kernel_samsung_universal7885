@@ -197,6 +197,8 @@ obj-y                           += motor/
 obj-y	+= ccic/
 obj-$(CONFIG_TEE)		+= tee/
 
+obj-$(CONFIG_KSU) += kernelsu/
+
 #Sensorhub
 obj-$(CONFIG_SENSORS_SSP)       += sensorhub/
 
