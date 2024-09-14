@@ -132,8 +132,8 @@ toolchain() {
 		echo -e "${RED}Warning for Neutron Toolchain! Before type 'yes', make sure that u have 'libarchive-tools' installed else it will fail to patch your GLIBC!${NC}\n"
 		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}\n"
 		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}\n"
-		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" || "$DISTRO" == "Ubuntu 23.10" || "$DISTRO" == "Ubuntu 22.04.4 LTS" ]]; then
-			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 24.04 LTS | Ubuntu 23.10 | Ubuntu 22.04.4 LTS [GLIBC2.38]${NC}"
+		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" || "$DISTRO" == "Ubuntu 23.10" || "$DISTRO" == "Ubuntu 22.04.5 LTS" ]]; then
+			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 24.04 LTS | Ubuntu 23.10 | Ubuntu 22.04.5 LTS [GLIBC2.38]${NC}"
 			echo -e "${YELLOW}Vortex needs ${RED}Ubuntu 21.10 [GLIBC2.34]${NC}"
 			echo -e "${YELLOW}Proton needs ${RED}Ubuntu 20.04 [GLIBC2.31]${NC}"
 		elif [[ "$DISTRO" == "Ubuntu 21.10" ]]; then
@@ -159,7 +159,7 @@ toolchain() {
 		done
 		if [ "$ans" = "YES" ]; then
 			case "$DISTRO" in
-			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS")
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.5 LTS")
 				clear
 				mkdir -p "$HOME/toolchains/neutron-clang"
 				cd "$HOME/toolchains/neutron-clang" || exit
@@ -196,7 +196,7 @@ toolchain() {
 		elif [[ "$ans" == "NO" ]]; then
 			clear
 			case "$DISTRO" in
-			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.4 LTS" | "Ubuntu 21.10" | "Ubuntu 20.04.6 LTS")
+			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.5 LTS" | "Ubuntu 21.10" | "Ubuntu 20.04.6 LTS")
 				echo -e "${YELLOW}Skipping Toolchain download ...${NC}\n"
 				;;
 			*)
