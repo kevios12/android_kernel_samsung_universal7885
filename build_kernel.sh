@@ -211,7 +211,7 @@ toolchain() {
 
 select_device() {
 	echo -e "${GREEN}Please select your Device${NC}\n"
-	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
+	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A20e (a20e)" "Galaxy A20 (a20)" "Galaxy A10 (a10)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
 		case "$devices" in
 		"Galaxy A40 (a40)")
 			clear
@@ -323,6 +323,135 @@ select_device() {
 					;;
 				"Build only for OneUI")
 					codename="a30"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_oneui
+					copy_oneui
+					pack_oneui
+					echo -e "${NC}"
+					break
+					;;
+				"Exit")
+					clear
+					echo -e "${RED}Exiting ...${NC}\n"
+					exit
+					;;
+				*)
+					echo -e "${RED}Invalid option. Please select again.${NC}\n"
+					;;
+				esac
+			done
+			;;
+		"Galaxy A20e (a20e)")
+			clear
+			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
+			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+				case "$os" in
+				"Build for ALL OS")
+					codename="a20e"
+					echo -e "${BLUE}"
+					build_all
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for AOSP")
+					codename="a20e"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_aosp
+					copy_aosp
+					pack_aosp
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for OneUI")
+					codename="a20e"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_oneui
+					copy_oneui
+					pack_oneui
+					echo -e "${NC}"
+					break
+					;;
+				"Exit")
+					clear
+					echo -e "${RED}Exiting ...${NC}\n"
+					exit
+					;;
+				*)
+					echo -e "${RED}Invalid option. Please select again.${NC}\n"
+					;;
+				esac
+			done
+			;;
+		"Galaxy A20 (a20)")
+			clear
+			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
+			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+				case "$os" in
+				"Build for ALL OS")
+					codename="a20"
+					echo -e "${BLUE}"
+					build_all
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for AOSP")
+					codename="a20"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_aosp
+					copy_aosp
+					pack_aosp
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for OneUI")
+					codename="a20"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_oneui
+					copy_oneui
+					pack_oneui
+					echo -e "${NC}"
+					break
+					;;
+				"Exit")
+					clear
+					echo -e "${RED}Exiting ...${NC}\n"
+					exit
+					;;
+				*)
+					echo -e "${RED}Invalid option. Please select again.${NC}\n"
+					;;
+				esac
+			done
+			;;
+		"Galaxy A10 (a10)")
+			clear
+			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
+			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+				case "$os" in
+				"Build for ALL OS")
+					codename="a10"
+					echo -e "${BLUE}"
+					build_all
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for AOSP")
+					codename="a10"
+					echo -e "${BLUE}"
+					set_selinux_permissive
+					builder_aosp
+					copy_aosp
+					pack_aosp
+					echo -e "${NC}"
+					break
+					;;
+				"Build only for OneUI")
+					codename="a10"
 					echo -e "${BLUE}"
 					set_selinux_permissive
 					builder_oneui
@@ -502,11 +631,11 @@ copy_oneui() {
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/permissive/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/enforce/dtb.img"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/permissive/dtb.img"
-	elif [ "$codename" = "a30" ]; then
-		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/oneui/enforce/"
-		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/oneui/permissive/"
-		cp $ANYKERNEL/prebuilt/a30/dtb_enf.img "$ANYKERNEL/oneui/enforce/dtb.img"
-		cp $ANYKERNEL/prebuilt/a30/dtb_perm.img "$ANYKERNEL/oneui/permissive/dtb.img"
+	elif [[ "$codename" = "a30" || "$codename" = "a20e" || "$codename" = "a20" || "$codename" = "a10" ]]; then
+		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/enforce/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/permissive/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb_enf.img "$ANYKERNEL/oneui/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb_perm.img "$ANYKERNEL/oneui/permissive/dtb.img"
 	elif [ "$codename" = "jackpotlte" ]; then
 		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/enforce/"
 		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/permissive/"
@@ -521,11 +650,11 @@ copy_aosp() {
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/permissive/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/enforce/dtb.img"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/permissive/dtb.img"
-	elif [ "$codename" = "a30" ]; then
-		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/aosp/enforce/"
-		cp $ANYKERNEL/prebuilt/a30/dtbo.img "$ANYKERNEL/aosp/permissive/"
-		cp $ANYKERNEL/prebuilt/a30/dtb_enf.img "$ANYKERNEL/aosp/enforce/dtb.img"
-		cp $ANYKERNEL/prebuilt/a30/dtb_perm.img "$ANYKERNEL/aosp/permissive/dtb.img"
+	elif [[ "$codename" = "a30" || "$codename" = "a20e" || "$codename" = "a20" || "$codename" = "a10" ]]; then
+		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/enforce/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/permissive/"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb_enf.img "$ANYKERNEL/aosp/enforce/dtb.img"
+		cp $ANYKERNEL/prebuilt/${codename}/dtb_perm.img "$ANYKERNEL/aosp/permissive/dtb.img"
 	elif [ "$codename" = "jackpotlte" ]; then
 		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/enforce/"
 		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/permissive/"
@@ -533,7 +662,7 @@ copy_aosp() {
 }
 
 build_all() {
-	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
+	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" || "$codename" == "a20e" || "$codename" == "a20" || "$codename" == "a30" ]]; then
 		set_selinux_permissive
 		builder_oneui
 		copy_oneui
@@ -611,7 +740,7 @@ create_aroma() {
 aroma() {
 	# create and pack AROMA
 	cd "$ANYKERNEL" || exit
-	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
+	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" || "$codename" == "a20e" || "$codename" == "a20" || "$codename" == "a10" ]]; then
 	sed -i "s/sysprop/${codename}/g" "$SRCTREE/kernel_zip/aroma/META-INF/com/google/android/aroma-config"
 		create_aroma META-INF tools kernel
 	elif [ "$codename" = "jackpotlte" ]; then
@@ -629,7 +758,7 @@ aroma() {
 pack_aosp() {
 	# create and pack ZIP
 	cd "$ANYKERNEL" || exit
-	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
+	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" || "$codename" == "a20e" || "$codename" == "a20" || "$codename" == "a10" ]]; then
 		create_zip_enforcing_aosp META-INF tools anykernel.sh Image dtb.img dtbo.img version
 		create_zip_permissive_aosp META-INF tools anykernel.sh Image dtb.img dtbo.img version
 	elif [ "$codename" = "jackpotlte" ]; then
@@ -649,7 +778,7 @@ pack_aosp() {
 pack_oneui() {
 	# create and pack ZIP
 	cd "$ANYKERNEL" || exit
-	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" ]]; then
+	if [[ "$codename" == "a40" || "$codename" == "a30s" || "$codename" == "a30" || "$codename" == "a20e" || "$codename" == "a20" || "$codename" == "a10" ]]; then
 		create_zip_enforcing_oneui META-INF tools anykernel.sh Image dtb.img dtbo.img version
 		create_zip_permissive_oneui META-INF tools anykernel.sh Image dtb.img dtbo.img version
 	elif [ "$codename" = "jackpotlte" ]; then
