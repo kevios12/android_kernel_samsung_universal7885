@@ -152,8 +152,9 @@ static int gpu_dvfs_governor_default(int utilization)
 
 static int gpu_dvfs_governor_interactive(int utilization)
 {
-//	const int highspeed_clock = 1001000;
-//	const int highspeed_load = 95;
+
+	const int highspeed_clock = 1001000;
+	const int highspeed_load = 95;
 
 	if ((dvfs->step > gpex_clock_get_table_idx(gpex_clock_get_max_clock())) &&
 	    (utilization > dvfs->table[dvfs->step].max_threshold)) {
